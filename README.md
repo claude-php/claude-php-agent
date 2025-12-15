@@ -481,12 +481,25 @@ See the [examples](./examples) directory for 70+ complete working examples inclu
 
 ## Documentation
 
-For complete documentation, see:
+### 🎓 Getting Started
+
+New to AI agents? Start with our comprehensive tutorial series:
+
+- **[📚 Getting Started Tutorials](docs/tutorials/getting-started/)** - Complete beginner-friendly series
+  - [Tutorial 0: Introduction to Agentic AI](docs/tutorials/getting-started/00-Introduction.md)
+  - [Tutorial 1: Your First Agent](docs/tutorials/getting-started/01-First-Agent.md)
+  - [Tutorial 2: ReAct Loop Basics](docs/tutorials/getting-started/02-ReAct-Basics.md)
+  - [Tutorial 3: Multi-Tool Agent](docs/tutorials/getting-started/03-Multi-Tool.md)
+  - [Tutorial 4: Production-Ready Patterns](docs/tutorials/getting-started/04-Production-Patterns.md)
+  - [Tutorial 5: Advanced Patterns](docs/tutorials/getting-started/05-Advanced-Patterns.md)
+
+### 📖 Complete Documentation
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
 - **[Documentation Index](docs/README.md)** - Complete guide to all features
 - **[Loop Strategies](docs/loop-strategies.md)** - Understanding agent loops
 - **[Agent Selection Guide](docs/agent-selection-guide.md)** - Choose the right pattern
+- **[Best Practices Guide](docs/BestPractices.md)** - Production-ready patterns
 - **[Examples](examples/)** - 70+ working code examples
 
 ## Requirements

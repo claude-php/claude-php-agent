@@ -83,3 +83,74 @@ if ($result->isSuccess()) {
 
 echo "\n" . str_repeat("═", 80) . "\n";
 
+// ============================================================================
+// Advanced: Using Design Patterns (Factory & Builder)
+// ============================================================================
+
+echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+echo "💡 Advanced: Production-Ready Patterns\n";
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+echo "The above example shows the simple way. For production code, consider\n";
+echo "using design patterns for better maintainability:\n\n";
+
+echo "1️⃣  Factory Pattern - Consistent agent creation:\n\n";
+echo "```php\n";
+echo "use ClaudeAgents\\Factory\\AgentFactory;\n";
+echo "use Monolog\\Logger;\n\n";
+echo "\$logger = new Logger('agents');\n";
+echo "\$factory = new AgentFactory(\$client, \$logger);\n\n";
+echo "// All agents get consistent configuration and logger\n";
+echo "\$agent = \$factory->create('react', [\n";
+echo "    'name' => 'calculator_agent',\n";
+echo "    'max_iterations' => 5,\n";
+echo "]);\n";
+echo "\$agent->withTool(\$calculator);\n";
+echo "```\n\n";
+
+echo "Benefits:\n";
+echo "  ✓ Consistent configuration across all agents\n";
+echo "  ✓ Automatic logger injection\n";
+echo "  ✓ Easy to test (mock the factory)\n";
+echo "  ✓ Single place to change defaults\n\n";
+
+echo "2️⃣  Builder Pattern - Type-safe configuration:\n\n";
+echo "```php\n";
+echo "use ClaudeAgents\\Config\\AgentConfigBuilder;\n\n";
+echo "\$config = AgentConfigBuilder::create()\n";
+echo "    ->withModel('claude-sonnet-4-20250514')\n";
+echo "    ->withMaxTokens(2048)\n";
+echo "    ->withMaxIterations(5)\n";
+echo "    ->withSystemPrompt('You are a helpful assistant')\n";
+echo "    ->addTool(\$calculator)\n";
+echo "    ->build();\n\n";
+echo "\$agent = \$factory->create('react', \$config);\n";
+echo "```\n\n";
+
+echo "Benefits:\n";
+echo "  ✓ Type-safe (typos caught at compile time)\n";
+echo "  ✓ IDE autocomplete support\n";
+echo "  ✓ Self-documenting code\n";
+echo "  ✓ Easy to add optional parameters\n\n";
+
+echo "3️⃣  Combined approach:\n\n";
+echo "```php\n";
+echo "use ClaudeAgents\\Factory\\AgentFactory;\n";
+echo "use ClaudeAgents\\Config\\AgentConfigBuilder;\n\n";
+echo "\$factory = new AgentFactory(\$client, \$logger);\n\n";
+echo "\$config = AgentConfigBuilder::create()\n";
+echo "    ->withMaxTokens(2048)\n";
+echo "    ->withMaxIterations(5)\n";
+echo "    ->addTool(\$calculator)\n";
+echo "    ->toArray();\n\n";
+echo "\$agent = \$factory->create('react', \$config);\n";
+echo "```\n\n";
+
+echo "📚 Learn more:\n";
+echo "  • Design Patterns Guide: docs/DesignPatterns.md\n";
+echo "  • Comprehensive Demo: examples/design_patterns_demo.php\n";
+echo "  • Factory Example: examples/factory_pattern_example.php\n";
+echo "  • Builder Example: examples/builder_pattern_example.php\n\n";
+
+echo str_repeat("═", 80) . "\n";
+

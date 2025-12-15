@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -187,7 +188,7 @@ class CoordinatorAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => "Task: {$task}\n\nWhat capabilities are needed? Return only a JSON array."]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
 
             // Try to extract JSON from the response
             if (preg_match('/\[.*?\]/s', $json, $matches)) {
@@ -303,18 +304,6 @@ class CoordinatorAgent implements AgentInterface
         $totalTasks = $perf['total_tasks'];
         $oldAvg = $perf['average_duration'];
         $perf['average_duration'] = ($oldAvg * ($totalTasks - 1) + $duration) / $totalTasks;
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

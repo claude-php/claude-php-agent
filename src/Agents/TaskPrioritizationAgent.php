@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -103,7 +104,7 @@ class TaskPrioritizationAgent implements AgentInterface
             'messages' => [['role' => 'user', 'content' => $prompt]],
         ]);
 
-        $json = $this->extractTextContent($response->content ?? []);
+        $json = TextContentExtractor::extractFromResponse($response);
         $tasks = json_decode($json, true);
 
         if (is_array($tasks)) {
@@ -123,7 +124,7 @@ class TaskPrioritizationAgent implements AgentInterface
             'messages' => [['role' => 'user', 'content' => $task['description']]],
         ]);
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     private function generateAdditionalTasks(string $lastResult): void
@@ -147,7 +148,7 @@ class TaskPrioritizationAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
             $newTasks = json_decode($json, true);
 
             if (is_array($newTasks) && ! empty($newTasks)) {
@@ -177,18 +178,6 @@ class TaskPrioritizationAgent implements AgentInterface
         }
 
         return $output;
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

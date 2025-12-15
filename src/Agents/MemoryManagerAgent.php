@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -264,7 +265,7 @@ class MemoryManagerAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
             $ids = json_decode($json, true);
 
             if (is_array($ids)) {
@@ -442,18 +443,6 @@ class MemoryManagerAgent implements AgentInterface
         $topIds = array_slice(array_keys($scores), 0, $limit);
 
         return array_filter(array_map(fn ($id) => $this->memory[$id] ?? null, $topIds));
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

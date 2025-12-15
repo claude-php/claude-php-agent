@@ -14,6 +14,7 @@
 6. [Common Use Cases](#common-use-cases)
 7. [Performance Characteristics](#performance-characteristics)
 8. [Examples and Code Patterns](#examples-and-code-patterns)
+9. [Design Patterns for Agent Creation](#design-patterns-for-agent-creation)
 
 ---
 
@@ -24,6 +25,7 @@ The Claude PHP Agent Framework provides **25+ specialized agent types** designed
 ### 🎯 Don't Want to Choose? Use the Adaptive Agent Service!
 
 **If you're unsure which agent to use**, consider the **[Adaptive Agent Service](./adaptive-agent-service.md)** - a meta-agent that automatically:
+
 - Analyzes your task to understand requirements
 - Selects the best agent from your registered agents
 - Validates the result quality and correctness
@@ -34,6 +36,7 @@ This guide is still useful for understanding what each agent does and for manual
 ### Why Multiple Agent Types?
 
 Different tasks have different characteristics:
+
 - **Complexity**: Simple rule-based vs. complex reasoning
 - **Scale**: Single-step vs. million-step tasks
 - **Interaction**: Conversational vs. batch processing
@@ -102,7 +105,8 @@ START HERE: What is your primary goal?
 The framework organizes agents into **7 categories** based on their primary purpose:
 
 ### 1. 🎯 Foundational Agents
-*Core agentic patterns for general-purpose tasks*
+
+_Core agentic patterns for general-purpose tasks_
 
 - **ReactAgent** - Reason-Act-Observe loop with tools
 - **PlanExecuteAgent** - Planning followed by execution
@@ -111,14 +115,16 @@ The framework organizes agents into **7 categories** based on their primary purp
 - **AutonomousAgent** - Persistent goal pursuit across sessions
 
 ### 2. 🏭 Production Operations
-*Monitoring, scheduling, and alerting for production systems*
+
+_Monitoring, scheduling, and alerting for production systems_
 
 - **MonitoringAgent** - System and metric monitoring
 - **SchedulerAgent** - Task scheduling and cron jobs
 - **AlertAgent** - Intelligent notification processing
 
 ### 3. 🤖 Classical AI
-*Traditional AI agent architectures (Russell & Norvig)*
+
+_Traditional AI agent architectures (Russell & Norvig)_
 
 - **ReflexAgent** - Simple condition-action rules
 - **ModelBasedAgent** - State-aware decision making
@@ -126,7 +132,8 @@ The framework organizes agents into **7 categories** based on their primary purp
 - **LearningAgent** - Experience-based adaptation
 
 ### 4. 🤝 Multi-Agent Systems
-*Collaboration and coordination between multiple agents*
+
+_Collaboration and coordination between multiple agents_
 
 - **CollaborationManager** - AutoGen-style multi-agent collaboration
 - **TaskPrioritizationAgent** - BabyAGI-style task management
@@ -134,20 +141,23 @@ The framework organizes agents into **7 categories** based on their primary purp
 - **WorkerAgent** - Specialized worker for hierarchical systems
 
 ### 5. 💬 Conversational
-*Dialog management and natural language understanding*
+
+_Dialog management and natural language understanding_
 
 - **DialogAgent** - Multi-turn conversation management
 - **IntentClassifierAgent** - Intent recognition and entity extraction
 
 ### 6. 🎓 Specialized Roles
-*Domain-specific capabilities*
+
+_Domain-specific capabilities_
 
 - **EnvironmentSimulatorAgent** - What-if analysis and prediction
 - **SolutionDiscriminatorAgent** - Solution evaluation and ranking
 - **MemoryManagerAgent** - Shared knowledge management
 
 ### 7. 🚀 Advanced Patterns
-*Cutting-edge reasoning and exploration techniques*
+
+_Cutting-edge reasoning and exploration techniques_
 
 - **MakerAgent** - Million-step tasks with zero errors (MDAP)
 - **TreeOfThoughtsAgent** - Tree-based exploration
@@ -160,18 +170,21 @@ The framework organizes agents into **7 categories** based on their primary purp
 ## Detailed Agent Reference
 
 ### ReactAgent
+
 **Pattern**: Reason-Act-Observe Loop  
 **Best For**: General-purpose autonomous tasks requiring tools  
 **Scale**: ~10-100 steps  
 **Complexity**: Medium
 
 **When to Use:**
+
 - You need an agent to use multiple tools intelligently
 - The task requires iterative problem-solving
 - You want observation-driven refinement
 - You're building a research, analysis, or data processing system
 
 **Configuration:**
+
 ```php
 $agent = new ReactAgent($client, [
     'tools' => [$searchTool, $calculatorTool, $weatherTool],
@@ -181,35 +194,41 @@ $agent = new ReactAgent($client, [
 ```
 
 **Example Use Cases:**
+
 - Web research and data gathering
 - Financial analysis and calculations
 - API integration and data processing
 - Multi-step problem solving
 
 **Strengths:**
+
 - ✅ Flexible and general-purpose
 - ✅ Good tool orchestration
 - ✅ Self-correcting through observation
 
 **Limitations:**
+
 - ❌ Can struggle with very long task sequences
 - ❌ May need guidance for complex planning
 
 ---
 
 ### MakerAgent (MDAP)
+
 **Pattern**: Massively Decomposed Agentic Processes  
 **Best For**: Million-step tasks requiring zero errors  
 **Scale**: Millions of steps  
 **Complexity**: Extreme
 
 **When to Use:**
+
 - You need guaranteed accuracy on massive tasks
 - The task can be decomposed into atomic subtasks
 - Error rates must be near-zero
 - You're working on organization-level processes
 
 **Configuration:**
+
 ```php
 $maker = new MakerAgent($client, [
     'voting_k' => 3,                    // First-to-ahead-by-3 voting
@@ -219,18 +238,21 @@ $maker = new MakerAgent($client, [
 ```
 
 **Example Use Cases:**
+
 - Complex algorithmic tasks (Towers of Hanoi)
 - Large-scale data processing pipelines
 - Multi-phase project execution
 - Tasks requiring absolute correctness
 
 **Strengths:**
+
 - ✅ Scales to millions of steps
 - ✅ Near-zero error rates through voting
 - ✅ Sub-linear cost scaling
 - ✅ Red-flagging for reliability
 
 **Limitations:**
+
 - ❌ Higher initial overhead
 - ❌ Best for decomposable tasks
 - ❌ More complex to configure
@@ -238,18 +260,21 @@ $maker = new MakerAgent($client, [
 ---
 
 ### HierarchicalAgent
+
 **Pattern**: Master-Worker Delegation  
 **Best For**: Multi-domain tasks requiring specialized expertise  
 **Scale**: ~100-5K steps  
 **Complexity**: High
 
 **When to Use:**
+
 - Tasks span multiple domains (research, writing, coding)
 - You need specialized expertise for different subtasks
 - Task can be decomposed by capability
 - You want coordinated execution
 
 **Configuration:**
+
 ```php
 $master = new HierarchicalAgent($client);
 
@@ -263,35 +288,41 @@ $master->registerWorker('writer', new WorkerAgent($client, [
 ```
 
 **Example Use Cases:**
+
 - Business analysis and report generation
 - Multi-phase project execution
 - Content creation with research
 - Complex decision support systems
 
 **Strengths:**
+
 - ✅ Specialized expertise per domain
 - ✅ Efficient task delegation
 - ✅ Good for complex workflows
 
 **Limitations:**
+
 - ❌ Requires upfront worker definition
 - ❌ Overhead from coordination
 
 ---
 
 ### ReflectionAgent
+
 **Pattern**: Generate-Critique-Refine  
 **Best For**: Quality-critical outputs  
 **Scale**: ~50-500 steps  
 **Complexity**: Medium
 
 **When to Use:**
+
 - Output quality is more important than speed
 - You're generating code, writing, or creative content
 - You want iterative improvement
 - Quality can be scored objectively
 
 **Configuration:**
+
 ```php
 $agent = new ReflectionAgent($client, [
     'max_refinements' => 3,
@@ -300,35 +331,41 @@ $agent = new ReflectionAgent($client, [
 ```
 
 **Example Use Cases:**
+
 - Code generation and optimization
 - Technical writing and documentation
 - Creative writing
 - Design and planning documents
 
 **Strengths:**
+
 - ✅ High-quality outputs
 - ✅ Self-improving
 - ✅ Quality scoring
 
 **Limitations:**
+
 - ❌ Slower than single-pass agents
 - ❌ Higher token costs
 
 ---
 
 ### DialogAgent
+
 **Pattern**: Multi-turn Conversation Management  
 **Best For**: Conversational interfaces  
 **Scale**: Continuous (session-based)  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Building chatbots or virtual assistants
 - Need to maintain context across turns
 - Supporting multi-turn conversations
 - Session-based interactions
 
 **Configuration:**
+
 ```php
 $dialog = new DialogAgent($client, [
     'session_timeout' => 3600,  // 1 hour
@@ -340,35 +377,41 @@ $response2 = $dialog->turn("Order #12345");
 ```
 
 **Example Use Cases:**
+
 - Customer service chatbots
 - Virtual assistants
 - Interactive help systems
 - Support ticket systems
 
 **Strengths:**
+
 - ✅ Context preservation
 - ✅ Session management
 - ✅ Natural conversations
 
 **Limitations:**
+
 - ❌ Requires state management
 - ❌ Context window limitations
 
 ---
 
 ### MonitoringAgent
+
 **Pattern**: Continuous Data Stream Monitoring  
 **Best For**: System monitoring and anomaly detection  
 **Scale**: Real-time, continuous  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Monitoring servers, applications, or metrics
 - Need anomaly detection
 - LLM-enhanced alerting
 - Pattern analysis
 
 **Configuration:**
+
 ```php
 $monitor = new MonitoringAgent($client, [
     'thresholds' => ['cpu' => 80, 'memory' => 90],
@@ -381,35 +424,41 @@ $monitor->watch($dataSource, function($alert) {
 ```
 
 **Example Use Cases:**
+
 - Server and infrastructure monitoring
 - Application performance monitoring
 - Business metrics tracking
 - Security monitoring
 
 **Strengths:**
+
 - ✅ Real-time detection
 - ✅ LLM-powered insights
 - ✅ Threshold-based alerts
 
 **Limitations:**
+
 - ❌ Requires continuous running
 - ❌ Cost for high-frequency checks
 
 ---
 
 ### AlertAgent
+
 **Pattern**: Intelligent Notification Processing  
 **Best For**: Smart alerting and escalation  
 **Scale**: Real-time  
 **Complexity**: Low
 
 **When to Use:**
+
 - Processing and routing alerts
 - Need intelligent severity classification
 - Aggregating and deduplicating alerts
 - Multi-channel delivery
 
 **Configuration:**
+
 ```php
 $alertAgent = new AlertAgent($client, [
     'aggregation_window' => 300,  // 5 minutes
@@ -425,35 +474,41 @@ $alertAgent->processAlert([
 ```
 
 **Example Use Cases:**
+
 - Incident management
 - System notifications
 - Alert routing and escalation
 - On-call systems
 
 **Strengths:**
+
 - ✅ Intelligent routing
 - ✅ Aggregation and deduplication
 - ✅ Multi-channel support
 
 **Limitations:**
+
 - ❌ Best paired with monitoring systems
 - ❌ Requires channel configuration
 
 ---
 
 ### RAGAgent
+
 **Pattern**: Retrieval-Augmented Generation  
 **Best For**: Knowledge-grounded responses  
 **Scale**: ~10-100 steps per query  
 **Complexity**: Medium
 
 **When to Use:**
+
 - Need to ground responses in specific documents
 - Building knowledge base systems
 - Want source attribution
 - Handling domain-specific information
 
 **Configuration:**
+
 ```php
 $rag = new RAGAgent($client, [
     'top_k' => 3,  // Retrieve top 3 sources
@@ -466,35 +521,41 @@ $result = $rag->run('How do I use namespaces in PHP?');
 ```
 
 **Example Use Cases:**
+
 - Documentation systems
 - Knowledge bases
 - Q&A systems
 - Technical support
 
 **Strengths:**
+
 - ✅ Grounded in specific knowledge
 - ✅ Source attribution
 - ✅ Reduces hallucinations
 
 **Limitations:**
+
 - ❌ Requires document preparation
 - ❌ Limited to indexed knowledge
 
 ---
 
 ### ChainOfThoughtAgent
+
 **Pattern**: Step-by-Step Reasoning  
 **Best For**: Transparent logical reasoning  
 **Scale**: ~10-500 steps  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Need to show reasoning process
 - Working on math or logic problems
 - Want transparent decision-making
 - Educational or explanatory contexts
 
 **Configuration:**
+
 ```php
 $agent = new ChainOfThoughtAgent($client, [
     'mode' => 'zero_shot',  // or 'few_shot'
@@ -505,35 +566,41 @@ $result = $agent->run('If a shirt costs $40 and is 20% off, what is the final pr
 ```
 
 **Example Use Cases:**
+
 - Mathematical problem solving
 - Logical reasoning tasks
 - Educational systems
 - Explainable AI
 
 **Strengths:**
+
 - ✅ Transparent reasoning
 - ✅ Good for math problems
 - ✅ Easy to implement
 
 **Limitations:**
+
 - ❌ Can be verbose
 - ❌ Not always faster than direct answers
 
 ---
 
 ### TreeOfThoughtsAgent
+
 **Pattern**: Tree-Based Exploration  
 **Best For**: Complex problems with multiple solution paths  
 **Scale**: ~100-1K steps  
 **Complexity**: High
 
 **When to Use:**
+
 - Problem has multiple possible approaches
 - Need to explore solution space
 - Want to evaluate different paths
 - Optimization or creative tasks
 
 **Configuration:**
+
 ```php
 $agent = new TreeOfThoughtsAgent($client, [
     'branch_count' => 3,           // Thoughts per node
@@ -545,35 +612,41 @@ $result = $agent->run('Find a way to make 24 using 3, 5, 7, 11');
 ```
 
 **Example Use Cases:**
+
 - Puzzle solving
 - Optimization problems
 - Creative writing
 - Strategic planning
 
 **Strengths:**
+
 - ✅ Explores multiple paths
 - ✅ Evaluates alternatives
 - ✅ Good for exploration
 
 **Limitations:**
+
 - ❌ Higher computational cost
 - ❌ Can be slower
 
 ---
 
 ### PlanExecuteAgent
+
 **Pattern**: Planning Followed by Execution  
 **Best For**: Complex multi-step tasks requiring upfront planning  
 **Scale**: ~100-1K steps  
 **Complexity**: Medium-High
 
 **When to Use:**
+
 - Task requires careful upfront planning
 - Multiple dependent steps
 - Resource coordination needed
 - Project-like workflows
 
 **Configuration:**
+
 ```php
 $agent = new PlanExecuteAgent($client, [
     'max_plan_iterations' => 3,
@@ -584,35 +657,41 @@ $result = $agent->run('Plan and execute a marketing campaign launch');
 ```
 
 **Example Use Cases:**
+
 - Project planning
 - Workflow automation
 - Multi-phase processes
 - Resource scheduling
 
 **Strengths:**
+
 - ✅ Structured approach
 - ✅ Good for complex workflows
 - ✅ Separates planning from execution
 
 **Limitations:**
+
 - ❌ Less flexible than ReAct
 - ❌ Upfront planning overhead
 
 ---
 
 ### AutonomousAgent
+
 **Pattern**: Persistent Goal Pursuit  
 **Best For**: Long-running tasks across multiple sessions  
 **Scale**: ~100-5K steps, multi-session  
 **Complexity**: Medium-High
 
 **When to Use:**
+
 - Tasks span multiple sessions
 - Need to persist state between runs
 - Long-running goals
 - Progress tracking required
 
 **Configuration:**
+
 ```php
 $agent = new AutonomousAgent($client, [
     'goal' => 'Complete website redesign',
@@ -623,35 +702,41 @@ $result = $agent->run(); // Can run multiple times
 ```
 
 **Example Use Cases:**
+
 - Long-term projects
 - Background task processing
 - Persistent assistants
 - Multi-session workflows
 
 **Strengths:**
+
 - ✅ State persistence
 - ✅ Multi-session support
 - ✅ Progress tracking
 
 **Limitations:**
+
 - ❌ Requires state management
 - ❌ More complex setup
 
 ---
 
 ### IntentClassifierAgent
+
 **Pattern**: Intent Recognition and Entity Extraction  
 **Best For**: Natural language understanding  
 **Scale**: Instant (single call)  
 **Complexity**: Low
 
 **When to Use:**
+
 - Routing user requests
 - NLU in conversational systems
 - Command interpretation
 - Form filling assistance
 
 **Configuration:**
+
 ```php
 $classifier = new IntentClassifierAgent($client);
 
@@ -665,35 +750,41 @@ $result = $classifier->run("I'd like to fly to London tomorrow");
 ```
 
 **Example Use Cases:**
+
 - Chatbot routing
 - Command interpretation
 - Form processing
 - Request classification
 
 **Strengths:**
+
 - ✅ Fast classification
 - ✅ Entity extraction
 - ✅ Confidence scores
 
 **Limitations:**
+
 - ❌ Requires intent definitions
 - ❌ Single-turn only
 
 ---
 
 ### ReflexAgent
+
 **Pattern**: Condition-Action Rules  
 **Best For**: Fast rule-based responses  
 **Scale**: Instant  
 **Complexity**: Low
 
 **When to Use:**
+
 - Simple, deterministic responses
 - High-speed requirements
 - Rule-based systems
 - FAQ-style interactions
 
 **Configuration:**
+
 ```php
 $reflex = new ReflexAgent($client);
 
@@ -706,35 +797,41 @@ $reflex->addRule(
 ```
 
 **Example Use Cases:**
+
 - FAQ automation
 - Simple chatbots
 - Command handling
 - Quick responses
 
 **Strengths:**
+
 - ✅ Very fast
 - ✅ Deterministic
 - ✅ Low cost
 
 **Limitations:**
+
 - ❌ Limited flexibility
 - ❌ Requires rule definition
 
 ---
 
 ### ModelBasedAgent
+
 **Pattern**: State-Aware Decision Making  
 **Best For**: Planning with world model  
 **Scale**: ~50-500 steps  
 **Complexity**: Medium
 
 **When to Use:**
+
 - Need to track world state
 - Planning with state transitions
 - Goal-directed behavior
 - Simulation requirements
 
 **Configuration:**
+
 ```php
 $agent = new ModelBasedAgent($client, [
     'initial_state' => ['location' => 'home', 'time' => 'morning'],
@@ -744,35 +841,41 @@ $result = $agent->run('Goal: arrive at work by 9am');
 ```
 
 **Example Use Cases:**
+
 - Route planning
 - Resource management
 - Game AI
 - Process simulation
 
 **Strengths:**
+
 - ✅ State tracking
 - ✅ Predictive planning
 - ✅ Goal-directed
 
 **Limitations:**
+
 - ❌ Requires state modeling
 - ❌ More complex than reflex
 
 ---
 
 ### UtilityBasedAgent
+
 **Pattern**: Utility Maximization  
 **Best For**: Optimization and trade-off analysis  
 **Scale**: ~10-100 steps  
 **Complexity**: Medium
 
 **When to Use:**
+
 - Multiple competing objectives
 - Need to optimize trade-offs
 - Decision support
 - Resource allocation
 
 **Configuration:**
+
 ```php
 $utility = new UtilityBasedAgent($client);
 
@@ -783,35 +886,41 @@ $result = $utility->run('Choose the best investment option');
 ```
 
 **Example Use Cases:**
+
 - Investment decisions
 - Resource allocation
 - Pricing optimization
 - Feature prioritization
 
 **Strengths:**
+
 - ✅ Multi-objective optimization
 - ✅ Trade-off analysis
 - ✅ Quantifiable decisions
 
 **Limitations:**
+
 - ❌ Requires utility functions
 - ❌ May oversimplify complex decisions
 
 ---
 
 ### LearningAgent
+
 **Pattern**: Experience-Based Adaptation  
 **Best For**: Adaptive systems  
 **Scale**: Continuous improvement  
 **Complexity**: Medium-High
 
 **When to Use:**
+
 - Need to improve over time
 - Feedback available
 - Strategy adaptation
 - Performance optimization
 
 **Configuration:**
+
 ```php
 $learning = new LearningAgent($client, [
     'initial_strategies' => ['analytical', 'creative', 'pragmatic'],
@@ -819,42 +928,48 @@ $learning = new LearningAgent($client, [
 ]);
 
 $result = $learning->run($task);
-$learning->provideFeedback($result->getMetadata()['experience_id'], 
-    reward: 0.8, 
+$learning->provideFeedback($result->getMetadata()['experience_id'],
+    reward: 0.8,
     success: true
 );
 ```
 
 **Example Use Cases:**
+
 - Personalization systems
 - A/B testing
 - Strategy optimization
 - Recommendation systems
 
 **Strengths:**
+
 - ✅ Improves over time
 - ✅ Adaptive behavior
 - ✅ Feedback-driven
 
 **Limitations:**
+
 - ❌ Requires feedback loop
 - ❌ Needs time to learn
 
 ---
 
 ### CollaborationManager (AutoGen-style)
+
 **Pattern**: Multi-Agent Collaboration  
 **Best For**: Complex tasks requiring multiple perspectives  
 **Scale**: ~500-5K steps  
 **Complexity**: High
 
 **When to Use:**
+
 - Task benefits from multiple perspectives
 - Need specialized capabilities
 - Complex research or analysis
 - Team-like collaboration
 
 **Configuration:**
+
 ```php
 $manager = new CollaborationManager($client, ['max_rounds' => 10]);
 
@@ -865,35 +980,41 @@ $result = $manager->collaborate('Write a research paper on AI ethics');
 ```
 
 **Example Use Cases:**
+
 - Research projects
 - Content creation with review
 - Complex analysis
 - Decision making
 
 **Strengths:**
+
 - ✅ Multiple perspectives
 - ✅ Specialized agents
 - ✅ Rich discussions
 
 **Limitations:**
+
 - ❌ Higher token costs
 - ❌ Longer execution time
 
 ---
 
 ### TaskPrioritizationAgent (BabyAGI-style)
+
 **Pattern**: Dynamic Task Generation and Prioritization  
 **Best For**: Goal-driven task management  
 **Scale**: ~500-1K steps  
 **Complexity**: High
 
 **When to Use:**
+
 - Need dynamic task breakdown
 - Priority-based execution
 - Goal-oriented workflows
 - Adaptive planning
 
 **Configuration:**
+
 ```php
 $taskAgent = new TaskPrioritizationAgent($client, [
     'goal' => 'Launch mobile app',
@@ -903,35 +1024,41 @@ $result = $taskAgent->run('Launch a new mobile application');
 ```
 
 **Example Use Cases:**
+
 - Project management
 - Goal decomposition
 - Adaptive workflows
 - Dynamic planning
 
 **Strengths:**
+
 - ✅ Dynamic task generation
 - ✅ Priority management
 - ✅ Goal-focused
 
 **Limitations:**
+
 - ❌ Can create many tasks
 - ❌ Requires clear goals
 
 ---
 
 ### CoordinatorAgent
+
 **Pattern**: Agent Orchestration and Load Balancing  
 **Best For**: Distributed agent systems  
 **Scale**: ~1K-10K steps  
 **Complexity**: High
 
 **When to Use:**
+
 - Managing multiple agents
 - Load balancing required
 - Capability-based routing
 - Distributed systems
 
 **Configuration:**
+
 ```php
 $coordinator = new CoordinatorAgent($client);
 
@@ -942,35 +1069,41 @@ $result = $coordinator->run($complexTask);
 ```
 
 **Example Use Cases:**
+
 - Agent networks
 - Microservices coordination
 - Load distribution
 - Capability routing
 
 **Strengths:**
+
 - ✅ Intelligent routing
 - ✅ Load balancing
 - ✅ Scalable
 
 **Limitations:**
+
 - ❌ Complex setup
 - ❌ Coordination overhead
 
 ---
 
 ### SchedulerAgent
+
 **Pattern**: Task Scheduling and Cron Jobs  
 **Best For**: Time-based task execution  
 **Scale**: Continuous  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Need cron-style scheduling
 - Recurring tasks
 - Dependency management
 - Batch processing
 
 **Configuration:**
+
 ```php
 $scheduler = new SchedulerAgent($client);
 
@@ -981,35 +1114,41 @@ $scheduler->run(); // Process scheduled tasks
 ```
 
 **Example Use Cases:**
+
 - Automated backups
 - Report generation
 - Data synchronization
 - Maintenance tasks
 
 **Strengths:**
+
 - ✅ Time-based execution
 - ✅ Dependency handling
 - ✅ Recurring support
 
 **Limitations:**
+
 - ❌ Requires continuous running
 - ❌ System integration needed
 
 ---
 
 ### EnvironmentSimulatorAgent
+
 **Pattern**: What-If Analysis and Prediction  
 **Best For**: Scenario simulation  
 **Scale**: ~10-100 steps per simulation  
 **Complexity**: Medium
 
 **When to Use:**
+
 - Need to predict outcomes
 - What-if analysis
 - Testing scenarios
 - Risk assessment
 
 **Configuration:**
+
 ```php
 $simulator = new EnvironmentSimulatorAgent($client, [
     'initial_state' => ['servers' => 3, 'load' => 'normal'],
@@ -1020,35 +1159,41 @@ $result = $simulator->simulateAction('Add 2 more servers');
 ```
 
 **Example Use Cases:**
+
 - Infrastructure planning
 - Risk analysis
 - Testing scenarios
 - Decision support
 
 **Strengths:**
+
 - ✅ Outcome prediction
 - ✅ Risk assessment
 - ✅ Testing without execution
 
 **Limitations:**
+
 - ❌ Predictions may not be perfect
 - ❌ Requires good state modeling
 
 ---
 
 ### SolutionDiscriminatorAgent
+
 **Pattern**: Solution Evaluation and Ranking  
 **Best For**: Choosing between alternatives  
 **Scale**: ~10-50 steps  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Multiple solution candidates
 - Need objective evaluation
 - Quality assessment
 - Best option selection
 
 **Configuration:**
+
 ```php
 $discriminator = new SolutionDiscriminatorAgent($client, [
     'criteria' => ['correctness', 'efficiency', 'maintainability'],
@@ -1058,35 +1203,41 @@ $evaluations = $discriminator->evaluateSolutions($candidateSolutions);
 ```
 
 **Example Use Cases:**
+
 - Code review
 - Design selection
 - Proposal evaluation
 - Quality assurance
 
 **Strengths:**
+
 - ✅ Objective evaluation
 - ✅ Multi-criteria assessment
 - ✅ Ranking support
 
 **Limitations:**
+
 - ❌ Requires clear criteria
 - ❌ Quality of criteria matters
 
 ---
 
 ### MemoryManagerAgent
+
 **Pattern**: Shared Knowledge Management  
 **Best For**: Cross-agent memory  
 **Scale**: Continuous  
 **Complexity**: Low-Medium
 
 **When to Use:**
+
 - Sharing knowledge between agents
 - Persistent memory needs
 - Semantic search required
 - Context preservation
 
 **Configuration:**
+
 ```php
 $memory = new MemoryManagerAgent($client);
 
@@ -1095,17 +1246,20 @@ $results = $memory->search('What is the rate limit?');
 ```
 
 **Example Use Cases:**
+
 - Shared context
 - Knowledge bases
 - Agent communication
 - Fact storage
 
 **Strengths:**
+
 - ✅ Persistent storage
 - ✅ Semantic search
 - ✅ Cross-agent sharing
 
 **Limitations:**
+
 - ❌ Requires storage backend
 - ❌ Search quality varies
 
@@ -1116,12 +1270,14 @@ $results = $memory->search('What is the rate limit?');
 ### By Task Complexity
 
 **Simple (< 100 steps)**
+
 - ReflexAgent - Rule-based responses
 - IntentClassifierAgent - Intent recognition
 - UtilityBasedAgent - Simple optimization
 - ChainOfThoughtAgent - Basic reasoning
 
 **Medium (100-1K steps)**
+
 - ReactAgent - General tool usage
 - PlanExecuteAgent - Structured workflows
 - ReflectionAgent - Quality-critical tasks
@@ -1130,12 +1286,14 @@ $results = $memory->search('What is the rate limit?');
 - TreeOfThoughtsAgent - Solution exploration
 
 **Complex (1K-10K steps)**
+
 - HierarchicalAgent - Multi-domain tasks
 - CollaborationManager - Multi-agent work
 - TaskPrioritizationAgent - Goal decomposition
 - CoordinatorAgent - Agent orchestration
 
 **Million-step Scale**
+
 - MakerAgent - Extreme scale with zero errors
 
 ---
@@ -1143,35 +1301,42 @@ $results = $memory->search('What is the rate limit?');
 ### By Primary Requirement
 
 **Speed & Responsiveness**
+
 1. ReflexAgent (instant, rule-based)
 2. IntentClassifierAgent (single call)
 3. ReactAgent (efficient tool use)
 
 **Accuracy & Quality**
+
 1. MakerAgent (near-zero errors)
 2. ReflectionAgent (iterative refinement)
 3. SolutionDiscriminatorAgent (evaluation)
 
 **Knowledge Grounding**
+
 1. RAGAgent (document-based)
 2. MemoryManagerAgent (shared knowledge)
 
 **Reasoning & Explanation**
+
 1. ChainOfThoughtAgent (step-by-step)
 2. TreeOfThoughtsAgent (exploration)
 3. PlanExecuteAgent (planning)
 
 **Specialization**
+
 1. HierarchicalAgent (expert workers)
 2. CollaborationManager (multiple perspectives)
 3. WorkerAgent (specific domains)
 
 **Production Operations**
+
 1. MonitoringAgent (system watching)
 2. AlertAgent (notification routing)
 3. SchedulerAgent (time-based tasks)
 
 **Conversation**
+
 1. DialogAgent (multi-turn)
 2. IntentClassifierAgent (understanding)
 
@@ -1216,12 +1381,14 @@ $results = $memory->search('What is the rate limit?');
 ### 1. Building a Customer Service Chatbot
 
 **Recommended Stack:**
+
 - **IntentClassifierAgent** - Route requests by intent
 - **DialogAgent** - Manage conversation state
 - **ReflexAgent** - Handle FAQs quickly
 - **RAGAgent** - Ground responses in documentation
 
 **Example Flow:**
+
 ```php
 // 1. Classify intent
 $intent = $intentClassifier->run($userMessage);
@@ -1240,11 +1407,13 @@ if ($intent['intent'] === 'faq') {
 ### 2. System Monitoring and Alerting
 
 **Recommended Stack:**
+
 - **MonitoringAgent** - Watch metrics and detect anomalies
 - **AlertAgent** - Process and route alerts
 - **SchedulerAgent** - Periodic health checks
 
 **Example Flow:**
+
 ```php
 // 1. Schedule monitoring
 $scheduler->schedule('health_check', '*/5 * * * *', function() use ($monitoring) {
@@ -1262,12 +1431,14 @@ $monitoring->watch($metricStream, function($alert) use ($alertAgent) {
 ### 3. Research and Report Generation
 
 **Recommended Stack:**
+
 - **HierarchicalAgent** - Coordinate specialized agents
 - **WorkerAgent** (researcher) - Gather information
 - **WorkerAgent** (analyst) - Analyze data
 - **WorkerAgent** (writer) - Create report
 
 **Example Flow:**
+
 ```php
 $master = new HierarchicalAgent($client);
 $master->registerWorker('researcher', $researchAgent);
@@ -1282,10 +1453,12 @@ $result = $master->run('Research and report on market trends');
 ### 4. Code Generation with Quality Assurance
 
 **Recommended Stack:**
+
 - **ReflectionAgent** - Generate and refine code
 - **SolutionDiscriminatorAgent** - Evaluate alternatives
 
 **Example Flow:**
+
 ```php
 // Generate with iterative refinement
 $reflection = new ReflectionAgent($client, [
@@ -1301,11 +1474,13 @@ $result = $reflection->run('Write a secure authentication function');
 ### 5. Complex Multi-Step Project
 
 **Recommended Stack:**
+
 - **MakerAgent** - For extremely complex tasks
 - **TaskPrioritizationAgent** - For goal decomposition
 - **PlanExecuteAgent** - For structured workflows
 
 **Example Flow:**
+
 ```php
 // For massive tasks requiring zero errors
 $maker = new MakerAgent($client, [
@@ -1321,11 +1496,13 @@ $result = $maker->run('Implement complete e-commerce system');
 ### 6. Knowledge Base Q&A System
 
 **Recommended Stack:**
+
 - **RAGAgent** - Document retrieval and grounding
 - **MemoryManagerAgent** - Persistent knowledge
 - **IntentClassifierAgent** - Query understanding
 
 **Example Flow:**
+
 ```php
 // 1. Build knowledge base
 $rag = new RAGAgent($client);
@@ -1341,11 +1518,13 @@ $result = $rag->run('How do I configure SSL?');
 ### 7. Decision Support System
 
 **Recommended Stack:**
+
 - **UtilityBasedAgent** - Multi-objective optimization
 - **EnvironmentSimulatorAgent** - Scenario testing
 - **TreeOfThoughtsAgent** - Explore alternatives
 
 **Example Flow:**
+
 ```php
 // 1. Simulate scenarios
 $simulator = new EnvironmentSimulatorAgent($client, [
@@ -1366,10 +1545,12 @@ $decision = $utility->run('Choose best investment strategy');
 ### 8. Adaptive Learning System
 
 **Recommended Stack:**
+
 - **LearningAgent** - Adapt based on feedback
 - **ReflectionAgent** - Quality improvement
 
 **Example Flow:**
+
 ```php
 $learning = new LearningAgent($client, [
     'initial_strategies' => ['strategy1', 'strategy2', 'strategy3'],
@@ -1394,17 +1575,20 @@ $learning->provideFeedback(
 ### Token Usage
 
 **Low Token Usage (< 1K tokens/task)**
+
 - ReflexAgent
 - IntentClassifierAgent
 - ChainOfThoughtAgent (simple tasks)
 
 **Medium Token Usage (1K-10K tokens/task)**
+
 - ReactAgent
 - PlanExecuteAgent
 - ReflectionAgent
 - RAGAgent
 
 **High Token Usage (10K-100K+ tokens/task)**
+
 - HierarchicalAgent
 - CollaborationManager
 - TreeOfThoughtsAgent
@@ -1415,24 +1599,29 @@ $learning->provideFeedback(
 ### Execution Time
 
 **Instant (< 1 second)**
+
 - ReflexAgent
 
 **Fast (1-10 seconds)**
+
 - IntentClassifierAgent
 - ChainOfThoughtAgent
 - RAGAgent (with indexed docs)
 
 **Medium (10-60 seconds)**
+
 - ReactAgent
 - PlanExecuteAgent
 - ReflectionAgent
 
 **Slow (1-10 minutes)**
+
 - HierarchicalAgent
 - CollaborationManager
 - TreeOfThoughtsAgent
 
 **Very Long (hours to days)**
+
 - MakerAgent (for million-step tasks)
 - AutonomousAgent (multi-session)
 
@@ -1441,21 +1630,25 @@ $learning->provideFeedback(
 ### Cost Efficiency
 
 **Most Cost-Efficient**
+
 1. ReflexAgent (rule-based, minimal LLM use)
 2. IntentClassifierAgent (single call)
 3. ChainOfThoughtAgent (single pass)
 
 **Moderate Cost**
+
 1. ReactAgent (iterative but bounded)
 2. RAGAgent (retrieval + generation)
 3. ReflectionAgent (multiple passes)
 
 **Higher Cost**
+
 1. CollaborationManager (multiple agents)
 2. TreeOfThoughtsAgent (exploration)
 3. HierarchicalAgent (multiple workers)
 
 **Specialized Cost Profile**
+
 - MakerAgent: High absolute cost but sub-linear scaling for massive tasks
 
 ---
@@ -1463,16 +1656,19 @@ $learning->provideFeedback(
 ### Reliability
 
 **Highest Reliability**
+
 1. MakerAgent (near-zero errors with voting)
 2. ReflexAgent (deterministic rules)
 3. ReflectionAgent (quality-driven)
 
 **High Reliability**
+
 1. RAGAgent (grounded in documents)
 2. PlanExecuteAgent (structured approach)
 3. SolutionDiscriminatorAgent (evaluation-based)
 
 **Standard Reliability**
+
 1. ReactAgent (observation-based correction)
 2. ChainOfThoughtAgent (reasoning-based)
 3. DialogAgent (context-aware)
@@ -1748,8 +1944,247 @@ The Claude PHP Agent Framework provides a rich set of agents for virtually any u
 - [MAKER_IMPLEMENTATION.md](../MAKER_IMPLEMENTATION.md) - MAKER details
 - [examples/](../examples/) - Working code examples
 - [FEATURES.md](../FEATURES.md) - Feature documentation
+- [DesignPatterns.md](DesignPatterns.md) - Design patterns for agent creation
+
+---
+
+## Design Patterns for Agent Creation
+
+Once you've selected the right agent type, use these design patterns to create and configure agents in a maintainable, production-ready way.
+
+### Factory Pattern: Consistent Agent Creation
+
+Use `AgentFactory` for centralized, consistent agent creation:
+
+```php
+use ClaudeAgents\Factory\AgentFactory;
+use ClaudePhp\ClaudePhp;
+use Monolog\Logger;
+
+$client = new ClaudePhp(apiKey: $_ENV['ANTHROPIC_API_KEY']);
+$logger = new Logger('agents');
+
+$factory = new AgentFactory($client, $logger);
+
+// Type-safe creation
+$reactAgent = $factory->createReactAgent([
+    'name' => 'task_executor',
+    'max_iterations' => 15,
+]);
+
+$hierarchicalAgent = $factory->createHierarchicalAgent([
+    'name' => 'coordinator',
+]);
+
+// Generic creation
+$agent = $factory->create('react', ['name' => 'generic_agent']);
+```
+
+**Benefits:**
+
+- ✅ Consistent configuration across all agents
+- ✅ Centralized dependency injection (logger, client)
+- ✅ Easier testing with mocks
+- ✅ Type-safe factory methods
+
+**Learn more:** [Factory Pattern Documentation](Factory.md)
+
+### Builder Pattern: Type-Safe Configuration
+
+Use `AgentConfigBuilder` for validated, fluent configuration:
+
+```php
+use ClaudeAgents\Builder\AgentConfigBuilder;
+
+$config = AgentConfigBuilder::create()
+    ->name('customer_support')
+    ->model('claude-sonnet-4-20250514')
+    ->maxIterations(10)
+    ->temperature(0.7)
+    ->systemPrompt('You are a helpful customer support agent')
+    ->build();
+
+$agent = $factory->create('dialog', $config->toArray());
+```
+
+**Benefits:**
+
+- ✅ IDE autocomplete and type checking
+- ✅ Automatic validation (temperature 0-1, iterations 1-100)
+- ✅ Clear, self-documenting code
+- ✅ Reusable configuration templates
+
+**Learn more:** [Builder Pattern Documentation](Builder.md)
+
+### Observer Pattern: Event-Driven Monitoring
+
+Use `EventDispatcher` for decoupled observability:
+
+```php
+use ClaudeAgents\Events\EventDispatcher;
+use ClaudeAgents\Events\{AgentStartedEvent, AgentCompletedEvent, AgentFailedEvent};
+
+$dispatcher = new EventDispatcher();
+
+// Subscribe to events
+$dispatcher->listen(AgentStartedEvent::class, function($event) {
+    echo "Agent {$event->getAgentName()} started\n";
+});
+
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    echo "Completed in " . round($event->getDuration(), 2) . "s\n";
+});
+
+$dispatcher->listen(AgentFailedEvent::class, function($event) {
+    error_log("Agent failed: " . $event->getError());
+});
+
+// Create factory with dispatcher
+$factory = new AgentFactory($client, $logger, $dispatcher);
+
+// All agents dispatch events automatically
+$agent = $factory->create('react');
+```
+
+**Benefits:**
+
+- ✅ Agents don't know about monitoring code
+- ✅ Add/remove monitoring without changing agents
+- ✅ Multiple listeners per event
+- ✅ Real-time metrics and alerts
+
+**Learn more:** [Event System Documentation](Events.md)
+
+### Combining Patterns
+
+Use all patterns together for production-quality code:
+
+```php
+// 1. Create event dispatcher for monitoring
+$dispatcher = new EventDispatcher();
+$dispatcher->listen(AgentCompletedEvent::class, [$metrics, 'record']);
+$dispatcher->listen(AgentFailedEvent::class, [$alerts, 'send']);
+
+// 2. Create factory with dispatcher
+$factory = new AgentFactory($client, $logger, $dispatcher);
+
+// 3. Build configuration with builder
+$config = AgentConfigBuilder::create()
+    ->name('production_agent')
+    ->model('claude-opus-4-20250514')
+    ->maxIterations(20)
+    ->temperature(0.7)
+    ->systemPrompt('Production system prompt')
+    ->build();
+
+// 4. Create agent via factory
+$agent = $factory->createReactAgent($config->toArray());
+
+// Result: Production-ready agent with:
+// - Centralized creation (Factory)
+// - Type-safe configuration (Builder)
+// - Automatic monitoring (Observer)
+```
+
+### Configuration Templates
+
+Create reusable agent templates:
+
+```php
+class AgentTemplates
+{
+    public static function customerSupport(): AgentConfig
+    {
+        return AgentConfigBuilder::create()
+            ->name('support')
+            ->model('claude-sonnet-4-20250514')
+            ->temperature(0.7)
+            ->maxIterations(5)
+            ->systemPrompt('You are a helpful customer support agent...')
+            ->build();
+    }
+
+    public static function dataAnalyst(): AgentConfig
+    {
+        return AgentConfigBuilder::create()
+            ->name('analyst')
+            ->model('claude-opus-4-20250514')
+            ->temperature(0.3)
+            ->maxIterations(15)
+            ->systemPrompt('You are a data analyst...')
+            ->build();
+    }
+}
+
+// Usage
+$supportAgent = $factory->createDialogAgent(
+    AgentTemplates::customerSupport()->toArray()
+);
+```
+
+### Additional Patterns
+
+**Strategy Pattern - Response Parsing:**
+
+```php
+use ClaudeAgents\Parsers\ResponseParserChain;
+
+$chain = new ResponseParserChain([
+    new JsonParser(),
+    new MarkdownParser(),
+    new XmlParser(),
+]);
+
+$parsed = $chain->parse($llmResponse);
+```
+
+**Template Method - Prompt Building:**
+
+```php
+use ClaudeAgents\Prompts\PromptBuilder;
+
+$prompt = PromptBuilder::create()
+    ->addContext('You are an expert PHP developer')
+    ->addTask('Review this code')
+    ->addCode($code, 'php')
+    ->addConstraint('Limit to 5 key points')
+    ->build();
+```
+
+**Error Handling with Retry Logic:**
+
+```php
+use ClaudeAgents\ErrorHandling\ErrorHandler;
+
+$handler = ErrorHandler::create()
+    ->maxRetries(3)
+    ->retryDelay(1000)
+    ->exponentialBackoff()
+    ->onError(fn($e) => $logger->error($e->getMessage()));
+
+$result = $handler->execute(fn() => $agent->run($task));
+```
+
+### Quick Reference
+
+| Pattern          | Purpose                 | Use When            |
+| ---------------- | ----------------------- | ------------------- |
+| **Factory**      | Centralized creation    | Always              |
+| **Builder**      | Type-safe configuration | Complex configs     |
+| **Observer**     | Event monitoring        | Production systems  |
+| **Strategy**     | Flexible parsing        | Variable LLM output |
+| **Template**     | Structured prompts      | Complex prompts     |
+| **ErrorHandler** | Resilient execution     | Network calls       |
+
+### Learn More
+
+- [Design Patterns Guide](DesignPatterns.md) - Comprehensive pattern documentation
+- [Best Practices](BestPractices.md) - Production-ready patterns
+- [Factory Example](../examples/factory_pattern_example.php) - Working code
+- [Builder Example](../examples/builder_pattern_example.php) - Working code
+- [Event System Example](../examples/event_system_example.php) - Working code
+- [Complete Demo](../examples/design_patterns_demo.php) - All patterns together
 
 ---
 
 **Happy agent building! 🚀**
-

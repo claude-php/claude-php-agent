@@ -291,5 +291,13 @@ echo "  • Token usage monitoring\n\n";
 
 echo str_repeat("═", 80) . "\n";
 echo "✨ ReactAgent example completed!\n";
+echo str_repeat("═", 80) . "\n\n";
+
+echo "💡 Production Tip: Use Design Patterns\n\n";
+echo "For production code, consider using:\n";
+echo "  • Factory Pattern: Consistent agent creation\n";
+echo "  • Builder Pattern: Type-safe configuration\n";
+echo "  • Event System: Decoupled monitoring\n\n";
+echo "See: examples/design_patterns_demo.php and docs/DesignPatterns.md\n\n";
 echo str_repeat("═", 80) . "\n";
 

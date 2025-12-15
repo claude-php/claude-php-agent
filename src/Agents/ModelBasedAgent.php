@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -175,7 +176,7 @@ class ModelBasedAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $plan = $this->extractTextContent($response->content ?? []);
+            $plan = TextContentExtractor::extractFromResponse($response);
 
             return $this->parseActions($plan);
         } catch (\Throwable $e) {
@@ -208,7 +209,7 @@ class ModelBasedAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $changes = $this->extractTextContent($response->content ?? []);
+            $changes = TextContentExtractor::extractFromResponse($response);
             $stateChanges = json_decode($changes, true);
 
             if (is_array($stateChanges) && ! empty($stateChanges)) {
@@ -242,7 +243,7 @@ class ModelBasedAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $prediction = $this->extractTextContent($response->content ?? []);
+            $prediction = TextContentExtractor::extractFromResponse($response);
             $predictedState = json_decode($prediction, true);
 
             return is_array($predictedState) ? $predictedState : $this->worldState;
@@ -314,24 +315,6 @@ class ModelBasedAgent implements AgentInterface
         }
 
         return $actions;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

@@ -12,8 +12,8 @@ use ClaudeAgents\Contracts\CallbackSupportingLoopInterface;
 use ClaudeAgents\Contracts\LoopStrategyInterface;
 use ClaudeAgents\Contracts\MemoryInterface;
 use ClaudeAgents\Contracts\ToolInterface;
-use ClaudeAgents\Loops\ReactLoop;
 use ClaudeAgents\Loops\PlanExecuteLoop;
+use ClaudeAgents\Loops\ReactLoop;
 use ClaudeAgents\Loops\ReflectionLoop;
 use ClaudeAgents\Memory\Memory;
 use ClaudeAgents\Progress\AgentUpdate;
@@ -43,9 +43,9 @@ use Psr\Log\NullLogger;
  */
 class Agent implements AgentInterface
 {
-    private ClaudePhp $client;
-    private ToolRegistry $tools;
-    private AgentConfig $config;
+    protected ClaudePhp $client;
+    protected ToolRegistry $tools;
+    protected AgentConfig $config;
     private ?MemoryInterface $memory = null;
     private ?ContextManager $contextManager = null;
     private LoopStrategyInterface $loopStrategy;
@@ -573,7 +573,7 @@ class Agent implements AgentInterface
             if ($this->retryConfig !== null) {
                 $retryHandler = new RetryHandler($this->retryConfig, $this->logger);
                 $context = $retryHandler->execute(
-                    fn () => $this->loopStrategy->execute($context)
+                    fn() => $this->loopStrategy->execute($context)
                 );
             } else {
                 // Execute the loop strategy
@@ -668,7 +668,8 @@ class Agent implements AgentInterface
     private function configureLoopCallbacks(): void
     {
         if ($this->loopStrategy instanceof CallbackSupportingLoopInterface) {
-            $this->loopStrategy->onIteration(function (int $iteration, mixed $response, AgentContext $context): void {
+            $loop = $this->loopStrategy;
+            $loop->onIteration(function (int $iteration, mixed $response, AgentContext $context): void {
                 if ($this->onIteration !== null) {
                     ($this->onIteration)($iteration, $response, $context);
                 }
@@ -692,7 +693,7 @@ class Agent implements AgentInterface
                 ]);
             });
 
-            $this->loopStrategy->onToolExecution(function (string $tool, array $input, $result): void {
+            $loop->onToolExecution(function (string $tool, array $input, $result): void {
                 if ($this->onToolExecution !== null) {
                     ($this->onToolExecution)($tool, $input, $result);
                 }
@@ -713,7 +714,8 @@ class Agent implements AgentInterface
 
         // Loop-specific hooks for richer progress.
         if ($this->loopStrategy instanceof PlanExecuteLoop) {
-            $this->loopStrategy->onPlanCreated(function (array $steps, AgentContext $context): void {
+            $planLoop = $this->loopStrategy;
+            $planLoop->onPlanCreated(function (array $steps, AgentContext $context): void {
                 if ($this->onPlanCreated !== null) {
                     ($this->onPlanCreated)($steps, $context);
                 }
@@ -725,7 +727,7 @@ class Agent implements AgentInterface
                 ]);
             });
 
-            $this->loopStrategy->onStepComplete(function (int $stepNumber, string $stepDescription, string $result): void {
+            $planLoop->onStepComplete(function (int $stepNumber, string $stepDescription, string $result): void {
                 if ($this->onStepComplete !== null) {
                     ($this->onStepComplete)($stepNumber, $stepDescription, $result);
                 }

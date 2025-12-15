@@ -5,22 +5,23 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Reasoning\CoTPrompts;
 use ClaudePhp\ClaudePhp;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Chain-of-Thought agent for step-by-step reasoning.
  */
-class ChainOfThoughtAgent implements AgentInterface
+class ChainOfThoughtAgent extends AbstractAgent
 {
-    private string $name;
     private string $mode; // 'zero_shot' or 'few_shot'
     private string $trigger;
+
+    /**
+     * @var array<int|string, mixed>
+     */
     private array $examples;
-    private LoggerInterface $logger;
+
+    protected const DEFAULT_NAME = 'cot_agent';
 
     /**
      * @param ClaudePhp $client Claude API client
@@ -29,22 +30,30 @@ class ChainOfThoughtAgent implements AgentInterface
      *   - mode: 'zero_shot' (default) or 'few_shot'
      *   - trigger: CoT trigger phrase
      *   - examples: Few-shot examples (for few_shot mode)
+     *   - model: Model to use
+     *   - max_tokens: Max tokens per response
      *   - logger: PSR-3 logger
      */
-    public function __construct(
-        private readonly ClaudePhp $client,
-        array $options = [],
-    ) {
-        $this->name = $options['name'] ?? 'cot_agent';
+    public function __construct(ClaudePhp $client, array $options = [])
+    {
+        parent::__construct($client, $options);
+    }
+
+    /**
+     * Initialize agent-specific configuration.
+     *
+     * @param array<string, mixed> $options
+     */
+    protected function initialize(array $options): void
+    {
         $this->mode = $options['mode'] ?? 'zero_shot';
         $this->trigger = $options['trigger'] ?? CoTPrompts::zeroShotTrigger();
         $this->examples = $options['examples'] ?? CoTPrompts::mathExamples();
-        $this->logger = $options['logger'] ?? new NullLogger();
     }
 
     public function run(string $task): AgentResult
     {
-        $this->logger->info("CoT Agent: {$task}");
+        $this->logStart($task);
 
         try {
             $systemPrompt = $this->buildSystemPrompt();
@@ -56,13 +65,15 @@ class ChainOfThoughtAgent implements AgentInterface
             }
 
             $response = $this->client->messages()->create([
-                'model' => 'claude-sonnet-4-5',
-                'max_tokens' => 2048,
+                'model' => $this->model,
+                'max_tokens' => $this->maxTokens,
                 'system' => $systemPrompt,
                 'messages' => [['role' => 'user', 'content' => $userPrompt]],
             ]);
 
-            $answer = $this->extractTextContent($response->content ?? []);
+            $answer = $this->extractTextContent($response);
+
+            $this->logSuccess(['reasoning_mode' => $this->mode]);
 
             return AgentResult::success(
                 answer: $answer,
@@ -70,22 +81,14 @@ class ChainOfThoughtAgent implements AgentInterface
                 iterations: 1,
                 metadata: [
                     'reasoning_mode' => $this->mode,
-                    'tokens' => [
-                        'input' => $response->usage->input_tokens ?? 0,
-                        'output' => $response->usage->output_tokens ?? 0,
-                    ],
+                    'tokens' => $this->formatSimpleTokenUsage($response),
                 ],
             );
         } catch (\Throwable $e) {
-            $this->logger->error("CoT Agent failed: {$e->getMessage()}");
+            $this->logError($e->getMessage());
 
             return AgentResult::failure(error: $e->getMessage());
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -100,23 +103,5 @@ class ChainOfThoughtAgent implements AgentInterface
         return 'You are an expert problem solver. ' .
                'Think through problems carefully, showing your reasoning step by step. ' .
                'Make your reasoning transparent and easy to follow.';
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\Exceptions\RetryException;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -29,6 +30,10 @@ class MicroAgent
     private int $maxTokens;
     private float $temperature;
     private LoggerInterface $logger;
+
+    /**
+     * @var array<string, string>
+     */
     private array $systemPrompts = [
         'decomposer' => 'You are a precise task decomposer. Break tasks into minimal, clear subtasks.',
         'executor' => 'You are a focused executor. Execute tasks precisely and concisely.',
@@ -76,7 +81,7 @@ class MicroAgent
                 ],
             ]);
 
-            $result = $this->extractTextContent($response->content ?? []);
+            $result = TextContentExtractor::extractFromResponse($response);
 
             $this->logger->debug("MicroAgent [{$this->role}] completed", [
                 'response_length' => strlen($result),
@@ -129,24 +134,6 @@ class MicroAgent
     private function getSystemPrompt(): string
     {
         return $this->systemPrompts[$this->role] ?? $this->systemPrompts['executor'];
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     /**

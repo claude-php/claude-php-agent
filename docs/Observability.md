@@ -7,6 +7,7 @@ Comprehensive observability system for monitoring, tracing, and analyzing Claude
 - [Overview](#overview)
 - [Components](#components)
 - [Quick Start](#quick-start)
+- [Event System](#event-system)
 - [Tracing](#tracing)
 - [Metrics](#metrics)
 - [Cost Tracking](#cost-tracking)
@@ -158,6 +159,266 @@ $tracer = $observer->getTracer();
 $metrics = $observer->getMetrics();
 $totalCost = $observer->getSessionCost();
 ```
+
+## Event System
+
+The **Event System** implements the Observer Pattern for decoupled monitoring. Instead of tightly coupling monitoring logic to agent code, you subscribe to lifecycle events and handle them independently.
+
+### Benefits
+
+- **Decoupling**: Agents don't know about observers
+- **Extensibility**: Add new listeners without modifying agents
+- **Multiple Handlers**: Many listeners can respond to the same event
+- **Testability**: Mock event handlers for testing
+
+### Quick Start
+
+```php
+use ClaudeAgents\Events\EventDispatcher;
+use ClaudeAgents\Events\{AgentStartedEvent, AgentCompletedEvent, AgentFailedEvent};
+
+$dispatcher = new EventDispatcher();
+
+// Subscribe to events
+$dispatcher->listen(AgentStartedEvent::class, function($event) {
+    echo "Agent '{$event->getAgentName()}' started\n";
+});
+
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    echo "Completed in " . round($event->getDuration(), 2) . "s\n";
+});
+
+$dispatcher->listen(AgentFailedEvent::class, function($event) {
+    error_log("Agent failed: " . $event->getError());
+});
+
+// Dispatch events (typically done by the agent automatically)
+$dispatcher->dispatch(new AgentStartedEvent('my_agent', 'Process data'));
+// ... agent execution ...
+$dispatcher->dispatch(new AgentCompletedEvent('my_agent', duration: 2.5, iterations: 3, result: 'Done'));
+```
+
+### Available Events
+
+| Event | When | Properties |
+|-------|------|------------|
+| `AgentStartedEvent` | Agent begins execution | `agentName`, `task`, `timestamp` |
+| `AgentCompletedEvent` | Agent finishes successfully | `agentName`, `duration`, `iterations`, `result` |
+| `AgentFailedEvent` | Agent encounters error | `agentName`, `error`, `exception`, `duration` |
+
+### Event Properties
+
+#### AgentStartedEvent
+
+```php
+$event = new AgentStartedEvent('research_agent', 'Find papers on ML');
+
+$event->getAgentName();  // 'research_agent'
+$event->getTask();       // 'Find papers on ML'
+$event->getTimestamp();  // 1702994400.123
+```
+
+#### AgentCompletedEvent
+
+```php
+$event = new AgentCompletedEvent(
+    'research_agent',
+    duration: 5.2,
+    iterations: 7,
+    result: 'Found 10 papers'
+);
+
+$event->getAgentName();  // 'research_agent'
+$event->getDuration();   // 5.2
+$event->getIterations(); // 7
+$event->getResult();     // 'Found 10 papers'
+```
+
+#### AgentFailedEvent
+
+```php
+$event = new AgentFailedEvent(
+    'research_agent',
+    error: 'API timeout',
+    exception: $exception,
+    duration: 2.5
+);
+
+$event->getAgentName();  // 'research_agent'
+$event->getError();      // 'API timeout'
+$event->getException();  // Exception instance or null
+$event->getDuration();   // 2.5
+```
+
+### Use Cases
+
+#### Metrics Collection
+
+```php
+class MetricsCollector {
+    private array $metrics = ['total_runs' => 0, 'successful_runs' => 0];
+    
+    public function onAgentCompleted(AgentCompletedEvent $event): void {
+        $this->metrics['total_runs']++;
+        $this->metrics['successful_runs']++;
+    }
+    
+    public function onAgentFailed(AgentFailedEvent $event): void {
+        $this->metrics['total_runs']++;
+    }
+}
+
+$metrics = new MetricsCollector();
+$dispatcher->listen(AgentCompletedEvent::class, [$metrics, 'onAgentCompleted']);
+$dispatcher->listen(AgentFailedEvent::class, [$metrics, 'onAgentFailed']);
+```
+
+#### Alert System
+
+```php
+class AlertSystem {
+    private array $failureCount = [];
+    
+    public function onAgentFailed(AgentFailedEvent $event): void {
+        $agent = $event->getAgentName();
+        $this->failureCount[$agent] = ($this->failureCount[$agent] ?? 0) + 1;
+        
+        if ($this->failureCount[$agent] >= 3) {
+            $this->sendAlert($agent, $event->getError());
+        }
+    }
+}
+
+$alerts = new AlertSystem();
+$dispatcher->listen(AgentFailedEvent::class, [$alerts, 'onAgentFailed']);
+```
+
+#### Performance Monitoring
+
+```php
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    if ($event->getDuration() > 10.0) {
+        error_log("Slow agent: {$event->getAgentName()} took " . $event->getDuration() . "s");
+    }
+});
+```
+
+#### Audit Logging
+
+```php
+$dispatcher->listen(AgentStartedEvent::class, function($event) {
+    file_put_contents('audit.log', sprintf(
+        "[%s] Agent '%s' started: %s\n",
+        date('Y-m-d H:i:s'),
+        $event->getAgentName(),
+        $event->getTask()
+    ), FILE_APPEND);
+});
+```
+
+### Multiple Listeners
+
+You can attach multiple listeners to the same event:
+
+```php
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    // Log to console
+    echo "Completed!\n";
+});
+
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    // Log to file
+    file_put_contents('log.txt', "Completed\n", FILE_APPEND);
+});
+
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    // Send metrics
+    sendToMonitoring($event);
+});
+
+// All 3 listeners will be called in order
+```
+
+### Integration with AgentFactory
+
+The `AgentFactory` can automatically inject an `EventDispatcher` into agents:
+
+```php
+$dispatcher = new EventDispatcher();
+$factory = new AgentFactory($client, $logger, $dispatcher);
+
+// Agents created by the factory will dispatch events
+$agent = $factory->create('react');
+// Events are automatically dispatched during agent execution
+```
+
+### Best Practices
+
+1. **Keep Handlers Fast**: Event handlers should be quick. For heavy work, queue it.
+
+```php
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    // Good: Quick operation
+    $redis->incr('agent_completed_count');
+    
+    // Bad: Slow operation
+    // sendEmailReport($event); // Use a queue instead
+});
+```
+
+2. **Handle Exceptions**: Don't let listener exceptions crash the agent.
+
+```php
+$dispatcher->listen(AgentCompletedEvent::class, function($event) {
+    try {
+        sendToExternalService($event);
+    } catch (\Exception $e) {
+        error_log("Failed to send event: " . $e->getMessage());
+    }
+});
+```
+
+3. **Use Classes for Complex Logic**: For non-trivial handlers, use classes.
+
+```php
+class ComprehensiveMonitor {
+    public function __construct(
+        private MetricsAggregator $metrics,
+        private CostTracker $cost,
+        private Logger $logger
+    ) {}
+    
+    public function onAgentCompleted(AgentCompletedEvent $event): void {
+        $this->metrics->recordDuration($event->getDuration());
+        $this->logger->info("Agent completed", [
+            'agent' => $event->getAgentName(),
+            'duration' => $event->getDuration(),
+        ]);
+    }
+}
+
+$monitor = new ComprehensiveMonitor($metrics, $cost, $logger);
+$dispatcher->listen(AgentCompletedEvent::class, [$monitor, 'onAgentCompleted']);
+```
+
+4. **Unsubscribe When Done**: Remove listeners you no longer need.
+
+```php
+$listener = function($event) { /* ... */ };
+$dispatcher->listen(AgentStartedEvent::class, $listener);
+
+// Later...
+$dispatcher->forget(AgentStartedEvent::class, $listener);
+```
+
+### Examples
+
+See the dedicated example:
+- `examples/event_system_example.php` - Comprehensive event system demo with metrics, alerts, and monitoring
+
+Also see:
+- `examples/design_patterns_demo.php` - Event system in context with other patterns
+- `docs/DesignPatterns.md` - Observer pattern documentation
 
 ## Tracing
 

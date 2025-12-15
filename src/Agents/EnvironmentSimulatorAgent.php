@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -82,7 +83,7 @@ class EnvironmentSimulatorAgent implements AgentInterface
             'messages' => [['role' => 'user', 'content' => $prompt]],
         ]);
 
-        $json = $this->extractTextContent($response->content ?? []);
+        $json = TextContentExtractor::extractFromResponse($response);
 
         // Extract JSON from markdown code blocks if present
         if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $json, $matches)) {
@@ -138,18 +139,6 @@ class EnvironmentSimulatorAgent implements AgentInterface
         }
 
         return $output;
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

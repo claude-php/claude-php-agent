@@ -327,6 +327,243 @@ $prompt = $template->format([
 - `socraticTeaching()` - Socratic teaching method
 - `debateOpponent()` - Debate opponent role
 
+### PromptBuilder
+
+**New in v2.0**: Fluent API for constructing complex prompts with multiple sections.
+
+The PromptBuilder uses the Template Method pattern to provide a clean, readable way to build structured prompts.
+
+#### When to Use PromptBuilder
+
+Use **PromptBuilder** when you need:
+- Multi-section prompts with clear structure
+- Fluent, chainable API
+- Runtime prompt construction
+- Consistent prompt formatting
+
+Use **PromptTemplate** when you need:
+- Simple variable substitution
+- Template strings with placeholders
+- Reusable prompt templates
+
+Use **PromptComposer** when you need:
+- Conditional sections
+- Complex composition logic
+- Multiple templates combined
+
+#### Creating Prompts
+
+```php
+use ClaudeAgents\Prompts\PromptBuilder;
+
+$prompt = PromptBuilder::create()
+    ->addContext('You are a helpful assistant')
+    ->addTask('Solve this math problem')
+    ->addExample('Input: 2+2', 'Output: 4')
+    ->addConstraint('Show your work step by step')
+    ->addInstructions('Format your answer as JSON')
+    ->build();
+```
+
+#### Available Methods
+
+```php
+// Context and task
+->addContext(string $context): self
+->addTask(string $task): self
+
+// Examples
+->addExample(string $input, string $output): self
+
+// Constraints and requirements
+->addConstraint(string $constraint): self
+->addInstructions(string $instructions): self
+
+// Custom sections
+->addSection(string $title, string $content): self
+
+// Build and manage
+->build(): string
+->clear(): self  // Reset builder
+```
+
+#### Complete Example
+
+```php
+use ClaudeAgents\Prompts\PromptBuilder;
+
+$prompt = PromptBuilder::create()
+    // Set the context
+    ->addContext(
+        'You are an expert software architect reviewing code. ' .
+        'Your goal is to provide constructive feedback that helps ' .
+        'developers improve code quality, maintainability, and performance.'
+    )
+    
+    // Define the task
+    ->addTask(
+        'Review the following PHP code and provide detailed feedback ' .
+        'on design patterns, best practices, and potential improvements.'
+    )
+    
+    // Show examples of good feedback
+    ->addExample(
+        'Input: function calculate($a, $b) { return $a + $b; }',
+        'Output: Good: Simple, clear function. Consider: Add type hints ' .
+        '(int $a, int $b): int and PHPDoc for better IDE support.'
+    )
+    
+    // Set constraints
+    ->addConstraint('Provide specific, actionable recommendations')
+    ->addConstraint('Prioritize suggestions by impact')
+    ->addConstraint('Include code examples for your suggestions')
+    
+    // Add instructions
+    ->addInstructions(
+        'Format your response as JSON with the following structure:' . "\n" .
+        '{"overall_score": 1-10, "strengths": [], "improvements": []}'
+    )
+    
+    // Custom section
+    ->addSection('Code to Review', $codeToReview)
+    
+    ->build();
+
+// Use with agent
+$agent->run($prompt);
+```
+
+#### Building Prompts Dynamically
+
+```php
+$builder = PromptBuilder::create()
+    ->addContext('You are a data analyst')
+    ->addTask('Analyze the following data');
+
+// Add constraints based on requirements
+if ($needsVisualization) {
+    $builder->addConstraint('Include visualization recommendations');
+}
+
+if ($urgentReport) {
+    $builder->addConstraint('Prioritize speed over depth');
+}
+
+// Add examples if available
+foreach ($exampleAnalyses as $input => $output) {
+    $builder->addExample($input, $output);
+}
+
+$prompt = $builder->build();
+```
+
+#### Reusing Builders
+
+```php
+// Create base builder
+$baseBuilder = PromptBuilder::create()
+    ->addContext('You are a helpful assistant')
+    ->addConstraint('Be concise and clear');
+
+// Clone for different tasks
+$mathBuilder = clone $baseBuilder;
+$mathBuilder
+    ->addTask('Solve this math problem')
+    ->addInstructions('Show step-by-step work');
+
+$codeBuilder = clone $baseBuilder;
+$codeBuilder
+    ->addTask('Review this code')
+    ->addInstructions('Provide constructive feedback');
+
+$mathPrompt = $mathBuilder->build();
+$codePrompt = $codeBuilder->build();
+```
+
+#### Comparison with Other Patterns
+
+**PromptBuilder vs PromptTemplate:**
+```php
+// PromptTemplate - Simple substitution
+$template = PromptTemplate::create('Summarize: {text}');
+$prompt = $template->format(['text' => $content]);
+
+// PromptBuilder - Structured construction
+$prompt = PromptBuilder::create()
+    ->addContext('You are a summarizer')
+    ->addTask("Summarize: {$content}")
+    ->addConstraint('Keep it under 3 sentences')
+    ->build();
+```
+
+**PromptBuilder vs PromptComposer:**
+```php
+// PromptBuilder - Simple, linear structure
+$prompt = PromptBuilder::create()
+    ->addContext('Context')
+    ->addTask('Task')
+    ->build();
+
+// PromptComposer - Complex, conditional logic
+$composer = PromptComposer::create()
+    ->addText('Task')
+    ->addConditional('Extra context', fn($v) => isset($v['context']))
+    ->addIfVariable('examples', 'Examples: {examples}');
+```
+
+#### Best Practices
+
+**✅ Good - Clear structure:**
+```php
+$prompt = PromptBuilder::create()
+    ->addContext($systemContext)
+    ->addTask($userTask)
+    ->addConstraint($requirement1)
+    ->addConstraint($requirement2)
+    ->addInstructions($outputFormat)
+    ->build();
+```
+
+**❌ Avoid - Mixing concerns:**
+```php
+$prompt = PromptBuilder::create()
+    ->addContext('Context and also here is the task and constraints')
+    ->build();  // Everything in one section
+```
+
+**✅ Good - Reusable builders:**
+```php
+$baseReviewer = PromptBuilder::create()
+    ->addContext('You are a code reviewer')
+    ->addConstraint('Be constructive');
+
+// Reuse for different languages
+$phpReviewer = clone $baseReviewer;
+$phpReviewer->addConstraint('Focus on PSR-12 compliance');
+
+$jsReviewer = clone $baseReviewer;
+$jsReviewer->addConstraint('Focus on ESLint rules');
+```
+
+#### API Reference
+
+```php
+class PromptBuilder
+{
+    public static function create(): self;
+    public function addContext(string $context): self;
+    public function addTask(string $task): self;
+    public function addExample(string $input, string $output): self;
+    public function addConstraint(string $constraint): self;
+    public function addInstructions(string $instructions): self;
+    public function addSection(string $title, string $content): self;
+    public function build(): string;
+    public function clear(): self;
+}
+```
+
+---
+
 ### PromptComposer
 
 Compose complex prompts from multiple sections with conditional logic.

@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -187,7 +188,7 @@ class ReflexAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $task]],
             ]);
 
-            $answer = $this->extractTextContent($response->content ?? []);
+            $answer = TextContentExtractor::extractFromResponse($response);
 
             return AgentResult::success(
                 answer: $answer,
@@ -224,24 +225,6 @@ class ReflexAgent implements AgentInterface
 
             Respond helpfully to inputs that don't match these rules.
             PROMPT;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

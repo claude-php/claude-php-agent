@@ -9,6 +9,7 @@ use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Contracts\ConversationalInterface;
 use ClaudeAgents\Conversation\Session;
 use ClaudeAgents\Conversation\Turn;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -126,18 +127,6 @@ class DialogAgent implements AgentInterface, ConversationalInterface
             'messages' => [['role' => 'user', 'content' => $prompt]],
         ]);
 
-        return $this->extractTextContent($response->content ?? []);
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
+        return TextContentExtractor::extractFromResponse($response);
     }
 }

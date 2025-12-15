@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -197,7 +198,7 @@ class IntentClassifierAgent implements AgentInterface
             'messages' => [['role' => 'user', 'content' => $prompt]],
         ]);
 
-        $json = $this->extractTextContent($response->content ?? []);
+        $json = TextContentExtractor::extractFromResponse($response);
 
         // Clean up potential markdown code blocks
         $json = preg_replace('/```(?:json)?\s*/', '', $json);
@@ -268,24 +269,6 @@ class IntentClassifierAgent implements AgentInterface
         }
 
         return implode("\n", $lines);
-    }
-
-    /**
-     * Extract text content from Claude response.
-     *
-     * @param array $content Response content blocks
-     * @return string Extracted text
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     /**

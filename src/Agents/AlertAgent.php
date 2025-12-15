@@ -7,6 +7,7 @@ namespace ClaudeAgents\Agents;
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Monitoring\Alert;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -229,7 +230,7 @@ class AlertAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            return $this->extractTextContent($response->content ?? []);
+            return TextContentExtractor::extractFromResponse($response);
         } catch (\Throwable $e) {
             $this->logger->warning("Failed to enhance alert message: {$e->getMessage()}");
 
@@ -314,23 +315,8 @@ class AlertAgent implements AgentInterface
     }
 
     /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
+     * Get agent name.
      */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
-    }
-
     public function getName(): string
     {
         return $this->name;

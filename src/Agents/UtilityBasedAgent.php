@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -147,7 +148,7 @@ class UtilityBasedAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
             $actions = json_decode($json, true);
 
             return is_array($actions) ? $actions : [];
@@ -297,24 +298,6 @@ class UtilityBasedAgent implements AgentInterface
         }
 
         return $output;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

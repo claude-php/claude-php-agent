@@ -59,6 +59,13 @@ Welcome to the Claude PHP Agent Framework documentation!
 
 ### Core Systems
 
+#### Design Patterns
+- [Design Patterns Overview](DesignPatterns.md) - Production-ready patterns
+- [Factory Pattern](Factory.md) - Consistent agent creation
+- [Builder Pattern](Builder.md) - Fluent configuration API
+- [Observer Pattern (Events)](Events.md) - Lifecycle monitoring
+- [Best Practices](BestPractices.md) - Production patterns and guidelines
+
 #### Tools & Execution
 - [Tools](Tools.md) - Creating and using tools
 - [Built-in Tools](BuiltInTools.md) - Pre-built tool library
@@ -72,8 +79,8 @@ Welcome to the Claude PHP Agent Framework documentation!
 - [Chains](Chains.md) - Sequential, parallel, and router chains
 
 #### Output Processing
-- [Parsers](Parsers.md) - Structured output extraction
-- [Prompts](Prompts.md) - Prompt engineering and templates
+- [Parsers](Parsers.md) - Structured output extraction (includes Strategy pattern)
+- [Prompts](Prompts.md) - Prompt engineering and templates (includes Template pattern)
 
 #### Observability
 - [Observability](Observability.md) - Monitoring, logging, and metrics

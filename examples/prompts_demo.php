@@ -374,5 +374,12 @@ echo "║  ✓ PromptComposer - Complex composition with conditions             
 echo "║  ✓ Validation - Error handling and helpful messages                   ║\n";
 echo "║  ✓ Partial Templates - Template specialization                        ║\n";
 echo "║  ✓ Real-world scenarios - Production-ready examples                   ║\n";
+echo "╠════════════════════════════════════════════════════════════════════════╣\n";
+echo "║ 💡 Also Available: PromptBuilder Pattern                              ║\n";
+echo "║                                                                        ║\n";
+echo "║ For fluent, method-chaining prompt construction:                      ║\n";
+echo "║  • PromptBuilder::create()->addContext()->addTask()->build()          ║\n";
+echo "║  • See: docs/Prompts.md#promptbuilder                                 ║\n";
+echo "║  • Example: examples/design_patterns_demo.php                         ║\n";
 echo "╚════════════════════════════════════════════════════════════════════════╝\n";
 

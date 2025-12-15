@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Reflection Agent (Generate-Reflect-Refine Pattern).
@@ -16,16 +14,13 @@ use Psr\Log\NullLogger;
  * Generates output, reflects on quality, and iteratively refines
  * until a quality threshold is met or max refinements reached.
  */
-class ReflectionAgent implements AgentInterface
+class ReflectionAgent extends AbstractAgent
 {
-    private ClaudePhp $client;
-    private string $name;
-    private string $model;
-    private int $maxTokens;
     private int $maxRefinements;
     private int $qualityThreshold;
     private ?string $criteria;
-    private LoggerInterface $logger;
+
+    protected const DEFAULT_NAME = 'reflection_agent';
 
     /**
      * @param ClaudePhp $client The Claude API client
@@ -40,19 +35,24 @@ class ReflectionAgent implements AgentInterface
      */
     public function __construct(ClaudePhp $client, array $options = [])
     {
-        $this->client = $client;
-        $this->name = $options['name'] ?? 'reflection_agent';
-        $this->model = $options['model'] ?? 'claude-sonnet-4-5';
-        $this->maxTokens = $options['max_tokens'] ?? 2048;
+        parent::__construct($client, $options);
+    }
+
+    /**
+     * Initialize agent-specific configuration.
+     *
+     * @param array<string, mixed> $options
+     */
+    protected function initialize(array $options): void
+    {
         $this->maxRefinements = $options['max_refinements'] ?? 3;
         $this->qualityThreshold = $options['quality_threshold'] ?? 8;
         $this->criteria = $options['criteria'] ?? null;
-        $this->logger = $options['logger'] ?? new NullLogger();
     }
 
     public function run(string $task): AgentResult
     {
-        $this->logger->info('Starting reflection agent', ['task' => substr($task, 0, 100)]);
+        $this->logStart($task);
 
         $totalTokens = ['input' => 0, 'output' => 0];
         $iterations = 0;
@@ -60,13 +60,13 @@ class ReflectionAgent implements AgentInterface
 
         try {
             // Step 1: Initial generation
-            $this->logger->debug('Step 1: Initial generation');
+            $this->logDebug('Step 1: Initial generation');
             $output = $this->generate($task, $totalTokens);
             $iterations++;
 
             // Step 2: Reflect and refine loop
             for ($i = 0; $i < $this->maxRefinements; $i++) {
-                $this->logger->debug('Reflection iteration ' . ($i + 1));
+                $this->logDebug('Reflection iteration ' . ($i + 1));
 
                 // Reflect on the output
                 $reflection = $this->reflect($task, $output, $totalTokens);
@@ -79,7 +79,7 @@ class ReflectionAgent implements AgentInterface
                     'feedback' => substr($reflection, 0, 200),
                 ];
 
-                $this->logger->debug("Reflection score: {$score}");
+                $this->logDebug("Reflection score: {$score}");
 
                 // Check if quality threshold met
                 if ($score >= $this->qualityThreshold) {
@@ -89,7 +89,7 @@ class ReflectionAgent implements AgentInterface
                 }
 
                 // Refine based on reflection
-                $this->logger->debug('Refining output');
+                $this->logDebug('Refining output');
                 $output = $this->refine($task, $output, $reflection, $totalTokens);
                 $iterations++;
             }
@@ -110,15 +110,10 @@ class ReflectionAgent implements AgentInterface
             );
 
         } catch (\Throwable $e) {
-            $this->logger->error("Reflection agent failed: {$e->getMessage()}");
+            $this->logError($e->getMessage());
 
             return AgentResult::failure($e->getMessage());
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -137,7 +132,7 @@ class ReflectionAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     /**
@@ -167,7 +162,7 @@ class ReflectionAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     /**
@@ -191,7 +186,7 @@ class ReflectionAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     /**
@@ -210,23 +205,5 @@ class ReflectionAgent implements AgentInterface
         }
 
         return 5; // Default if no score found
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

@@ -6,11 +6,9 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\Agent;
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Contracts\ToolInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Plan-and-Execute Agent.
@@ -19,19 +17,16 @@ use Psr\Log\NullLogger;
  * First creates a detailed plan, then executes each step, with optional
  * plan revision based on results.
  */
-class PlanExecuteAgent implements AgentInterface
+class PlanExecuteAgent extends AbstractAgent
 {
-    private ClaudePhp $client;
-    private string $name;
-    private string $model;
-    private int $maxTokens;
     private bool $allowReplan;
-    private LoggerInterface $logger;
 
     /**
      * @var array<ToolInterface>
      */
     private array $tools = [];
+
+    protected const DEFAULT_NAME = 'plan_execute_agent';
 
     /**
      * @param ClaudePhp $client The Claude API client
@@ -45,13 +40,18 @@ class PlanExecuteAgent implements AgentInterface
      */
     public function __construct(ClaudePhp $client, array $options = [])
     {
-        $this->client = $client;
-        $this->name = $options['name'] ?? 'plan_execute_agent';
-        $this->model = $options['model'] ?? 'claude-sonnet-4-5';
-        $this->maxTokens = $options['max_tokens'] ?? 2048;
+        parent::__construct($client, $options);
+    }
+
+    /**
+     * Initialize agent-specific configuration.
+     *
+     * @param array<string, mixed> $options
+     */
+    protected function initialize(array $options): void
+    {
         $this->allowReplan = $options['allow_replan'] ?? true;
         $this->tools = $options['tools'] ?? [];
-        $this->logger = $options['logger'] ?? new NullLogger();
     }
 
     /**
@@ -66,7 +66,7 @@ class PlanExecuteAgent implements AgentInterface
 
     public function run(string $task): AgentResult
     {
-        $this->logger->info('Starting plan-execute agent', ['task' => substr($task, 0, 100)]);
+        $this->logStart($task);
 
         $totalTokens = ['input' => 0, 'output' => 0];
         $iterations = 0;
@@ -74,16 +74,16 @@ class PlanExecuteAgent implements AgentInterface
 
         try {
             // Step 1: Create plan
-            $this->logger->debug('Step 1: Creating plan');
+            $this->logDebug('Step 1: Creating plan');
             $plan = $this->createPlan($task, $totalTokens);
             $iterations++;
 
             $steps = $this->parseSteps($plan);
-            $this->logger->debug('Plan created', ['steps' => count($steps)]);
+            $this->logDebug('Plan created', ['steps' => count($steps)]);
 
             // Step 2: Execute each step
             foreach ($steps as $i => $step) {
-                $this->logger->debug('Executing step ' . ($i + 1), ['step' => substr($step, 0, 50)]);
+                $this->logDebug('Executing step ' . ($i + 1), ['step' => substr($step, 0, 50)]);
 
                 $result = $this->executeStep($step, $stepResults, $totalTokens);
                 $iterations++;
@@ -96,7 +96,7 @@ class PlanExecuteAgent implements AgentInterface
 
                 // Optional: Check if replanning is needed
                 if ($this->allowReplan && $this->shouldReplan($step, $result)) {
-                    $this->logger->debug('Replanning after step ' . ($i + 1));
+                    $this->logDebug('Replanning after step ' . ($i + 1));
                     $remainingSteps = array_slice($steps, $i + 1);
                     $newPlan = $this->revisePlan($task, $stepResults, $remainingSteps, $totalTokens);
                     $iterations++;
@@ -112,7 +112,7 @@ class PlanExecuteAgent implements AgentInterface
             }
 
             // Step 3: Synthesize final answer
-            $this->logger->debug('Step 3: Synthesizing results');
+            $this->logDebug('Step 3: Synthesizing results');
             $finalAnswer = $this->synthesize($task, $stepResults, $totalTokens);
             $iterations++;
 
@@ -131,15 +131,10 @@ class PlanExecuteAgent implements AgentInterface
                 ],
             );
         } catch (\Throwable $e) {
-            $this->logger->error("Plan-execute agent failed: {$e->getMessage()}");
+            $this->logError($e->getMessage());
 
             return AgentResult::failure($e->getMessage());
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -243,7 +238,7 @@ class PlanExecuteAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     /**
@@ -305,7 +300,7 @@ class PlanExecuteAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
+        return TextContentExtractor::extractFromResponse($response);
     }
 
     /**
@@ -334,24 +329,6 @@ class PlanExecuteAgent implements AgentInterface
         $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
         $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-        return $this->extractTextContent($response->content ?? []);
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
+        return TextContentExtractor::extractFromResponse($response);
     }
 }

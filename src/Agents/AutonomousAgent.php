@@ -10,6 +10,7 @@ use ClaudeAgents\Exceptions\ConfigurationException;
 use ClaudeAgents\State\AgentState;
 use ClaudeAgents\State\Goal;
 use ClaudeAgents\State\StateManager;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -120,7 +121,7 @@ class AutonomousAgent implements AgentInterface
                 'messages' => $this->state->getConversationHistory(),
             ]);
 
-            $answer = $this->extractTextContent($response->content ?? []);
+            $answer = TextContentExtractor::extractFromResponse($response);
             $this->state->addMessage([
                 'role' => 'assistant',
                 'content' => $answer,
@@ -279,23 +280,5 @@ class AutonomousAgent implements AgentInterface
         }
 
         return false;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

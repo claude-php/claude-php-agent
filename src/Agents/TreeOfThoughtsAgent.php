@@ -5,25 +5,22 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Reasoning\Evaluator;
 use ClaudeAgents\Reasoning\SearchStrategy;
 use ClaudeAgents\Reasoning\ThoughtTree;
 use ClaudePhp\ClaudePhp;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Tree-of-Thoughts agent for multi-path exploration.
  */
-class TreeOfThoughtsAgent implements AgentInterface
+class TreeOfThoughtsAgent extends AbstractAgent
 {
-    private string $name;
     private int $branchCount;
     private int $maxDepth;
     private string $searchStrategy;
-    private LoggerInterface $logger;
     private Evaluator $evaluator;
+
+    protected const DEFAULT_NAME = 'tot_agent';
 
     /**
      * @param ClaudePhp $client Claude API client
@@ -32,24 +29,37 @@ class TreeOfThoughtsAgent implements AgentInterface
      *   - branch_count: How many thoughts per node (default: 3)
      *   - max_depth: Maximum tree depth (default: 4)
      *   - search_strategy: 'best_first', 'breadth_first', 'depth_first' (default: best_first)
+     *   - model: Model to use
+     *   - max_tokens: Max tokens per response
      *   - logger: PSR-3 logger
      */
-    public function __construct(
-        private readonly ClaudePhp $client,
-        array $options = [],
-    ) {
-        $this->name = $options['name'] ?? 'tot_agent';
+    public function __construct(ClaudePhp $client, array $options = [])
+    {
+        parent::__construct($client, $options);
+    }
+
+    /**
+     * Initialize agent-specific configuration.
+     *
+     * @param array<string, mixed> $options
+     */
+    protected function initialize(array $options): void
+    {
         $this->branchCount = $options['branch_count'] ?? 3;
         $this->maxDepth = $options['max_depth'] ?? 4;
         $this->searchStrategy = $options['search_strategy'] ?? 'best_first';
-        $this->logger = $options['logger'] ?? new NullLogger();
 
-        $this->evaluator = new Evaluator($client, '', 'feasibility and likelihood of success', ['logger' => $this->logger]);
+        $this->evaluator = new Evaluator(
+            $this->client,
+            '',
+            'feasibility and likelihood of success',
+            ['logger' => $this->logger]
+        );
     }
 
     public function run(string $task): AgentResult
     {
-        $this->logger->info("ToT Agent: {$task}");
+        $this->logStart($task, ['strategy' => $this->searchStrategy]);
 
         try {
             // Initialize thought tree
@@ -61,7 +71,7 @@ class TreeOfThoughtsAgent implements AgentInterface
             $totalTokens = ['input' => 0, 'output' => 0];
 
             for ($depth = 0; $depth < $this->maxDepth; $depth++) {
-                $this->logger->debug("Exploring depth {$depth}");
+                $this->logDebug("Exploring depth {$depth}");
 
                 $nextFrontier = [];
 
@@ -102,6 +112,11 @@ class TreeOfThoughtsAgent implements AgentInterface
                           substr($node->getThought(), 0, 100) . "...\n\n";
             }
 
+            $this->logSuccess([
+                'total_nodes' => $tree->getNodeCount(),
+                'path_length' => count($bestPath),
+            ]);
+
             return AgentResult::success(
                 answer: $answer,
                 messages: [],
@@ -116,15 +131,10 @@ class TreeOfThoughtsAgent implements AgentInterface
                 ],
             );
         } catch (\Throwable $e) {
-            $this->logger->error("ToT Agent failed: {$e->getMessage()}");
+            $this->logError($e->getMessage());
 
             return AgentResult::failure(error: $e->getMessage());
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -155,12 +165,12 @@ class TreeOfThoughtsAgent implements AgentInterface
             }
 
             $response = $this->client->messages()->create([
-                'model' => 'claude-sonnet-4-5',
+                'model' => $this->model,
                 'max_tokens' => 1024,
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $text = $this->extractTextContent($response->content ?? []);
+            $text = $this->extractTextContent($response);
 
             // Parse approaches from response
             $approaches = [];
@@ -183,23 +193,5 @@ class TreeOfThoughtsAgent implements AgentInterface
 
             return [];
         }
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

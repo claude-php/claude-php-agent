@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
 use ClaudePhp\ClaudePhp;
 
 /**
@@ -14,14 +13,12 @@ use ClaudePhp\ClaudePhp;
  * A specialized agent that handles specific domains or tasks
  * as part of a larger hierarchical agent system.
  */
-class WorkerAgent implements AgentInterface
+class WorkerAgent extends AbstractAgent
 {
-    private ClaudePhp $client;
-    private string $name;
     private string $specialty;
     private string $systemPrompt;
-    private string $model;
-    private int $maxTokens;
+
+    protected const DEFAULT_NAME = 'worker';
 
     /**
      * @param ClaudePhp $client The Claude API client
@@ -31,19 +28,28 @@ class WorkerAgent implements AgentInterface
      *   - system: System prompt for the worker
      *   - model: Model to use
      *   - max_tokens: Max tokens per response
+     *   - logger: PSR-3 logger
      */
     public function __construct(ClaudePhp $client, array $options = [])
     {
-        $this->client = $client;
-        $this->name = $options['name'] ?? 'worker';
+        parent::__construct($client, $options);
+    }
+
+    /**
+     * Initialize agent-specific configuration.
+     *
+     * @param array<string, mixed> $options
+     */
+    protected function initialize(array $options): void
+    {
         $this->specialty = $options['specialty'] ?? 'general tasks';
         $this->systemPrompt = $options['system'] ?? "You are a specialized worker agent for {$this->specialty}.";
-        $this->model = $options['model'] ?? 'claude-sonnet-4-5';
-        $this->maxTokens = $options['max_tokens'] ?? 2048;
     }
 
     public function run(string $task): AgentResult
     {
+        $this->logStart($task, ['specialty' => $this->specialty]);
+
         try {
             $response = $this->client->messages()->create([
                 'model' => $this->model,
@@ -54,7 +60,9 @@ class WorkerAgent implements AgentInterface
                 ],
             ]);
 
-            $answer = $this->extractTextContent($response->content ?? []);
+            $answer = $this->extractTextContent($response);
+
+            $this->logSuccess(['specialty' => $this->specialty]);
 
             return AgentResult::success(
                 answer: $answer,
@@ -63,24 +71,17 @@ class WorkerAgent implements AgentInterface
                 metadata: [
                     'worker' => $this->name,
                     'specialty' => $this->specialty,
-                    'token_usage' => [
-                        'input' => $response->usage->input_tokens ?? 0,
-                        'output' => $response->usage->output_tokens ?? 0,
-                        'total' => ($response->usage->input_tokens ?? 0) + ($response->usage->output_tokens ?? 0),
-                    ],
+                    'token_usage' => $this->formatTokenUsage($response),
                 ],
             );
         } catch (\Throwable $e) {
+            $this->logError($e->getMessage());
+
             return AgentResult::failure(
                 error: "Worker '{$this->name}' error: {$e->getMessage()}",
                 metadata: ['worker' => $this->name],
             );
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -89,23 +90,5 @@ class WorkerAgent implements AgentInterface
     public function getSpecialty(): string
     {
         return $this->specialty;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

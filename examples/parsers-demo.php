@@ -339,5 +339,15 @@ foreach ($allParsers as $name => $parser) {
     echo wordwrap($parser->getFormatInstructions(), 70) . "\n";
 }
 
-echo "\n=== Demo Complete ===\n";
+echo "\n=== Demo Complete ===\n\n";
+
+echo "╔════════════════════════════════════════════════════════════════════════╗\n";
+echo "║ 💡 Also Available: ResponseParserChain Pattern (Strategy Pattern)     ║\n";
+echo "║                                                                        ║\n";
+echo "║ For automatic format detection and parsing:                           ║\n";
+echo "║  • ResponseParserChain([JsonParser(), MarkdownParser(), XmlParser()])║\n";
+echo "║  • Automatically tries parsers in sequence until one succeeds         ║\n";
+echo "║  • See: docs/Parsers.md#responseparserchain                           ║\n";
+echo "║  • Example: examples/design_patterns_demo.php                         ║\n";
+echo "╚════════════════════════════════════════════════════════════════════════╝\n";
 

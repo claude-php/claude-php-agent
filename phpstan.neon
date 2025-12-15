@@ -77,9 +77,6 @@ parameters:
         # Return type mismatches (async operations complexity)
         -
             message: '#Method .* should return .* but returns#'
-        # Call to undefined method (intentional in context)
-        -
-            message: '#Call to an undefined method .*::addMetadata\(\)#'
         # AgentContext array offset issues (dynamic context structure)
         -
             message: '#Offset .* does not exist on array\{messages: array, iteration: int, timestamp: float\}#'

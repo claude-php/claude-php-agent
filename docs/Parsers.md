@@ -298,6 +298,255 @@ $rows = $parser->parse($csvText);
 $csv = $parser->toCsv($data, true);
 ```
 
+## ResponseParserChain
+
+**New in v2.0**: The Strategy Pattern implementation for automatic parser selection with fallthrough.
+
+The `ResponseParserChain` tries multiple parsers in sequence until one successfully parses the response. This provides robust parsing that handles multiple response formats automatically.
+
+### When to Use
+
+Use **ResponseParserChain** when:
+- Response format is unknown or varies
+- You want automatic format detection
+- You need fallback parsing strategies
+- Building robust parsing pipelines
+
+### Basic Usage
+
+```php
+use ClaudeAgents\Parsers\ResponseParserChain;
+use ClaudeAgents\Parsers\JsonResponseParser;
+use ClaudeAgents\Parsers\XmlParser;
+use ClaudeAgents\Parsers\MarkdownParser;
+
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),
+    new XmlParser(),
+    new MarkdownParser(),
+]);
+
+// Tries each parser until one succeeds
+$result = $chain->parse($response);
+```
+
+### How It Works
+
+```
+Input Response
+     ↓
+Try JsonResponseParser
+     ↓ (fails)
+Try XmlParser
+     ↓ (fails)
+Try MarkdownParser
+     ↓ (succeeds!)
+Return parsed result
+```
+
+### Complete Example
+
+```php
+use ClaudeAgents\Parsers\{
+    ResponseParserChain,
+    JsonResponseParser,
+    XmlParser,
+    MarkdownParser,
+    CsvParser
+};
+
+// Create chain with multiple parsers
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),  // Try JSON first (most common)
+    new XmlParser(),            // Then XML
+    new CsvParser(),            // Then CSV
+    new MarkdownParser(),       // Finally Markdown
+]);
+
+// Parse response - automatically uses the right parser
+$response = $llm->generate($prompt);
+$parsed = $chain->parse($response);
+
+// The chain:
+// 1. Tries JSON parser - if JSON found, returns immediately
+// 2. If JSON fails, tries XML parser
+// 3. If XML fails, tries CSV parser
+// 4. If CSV fails, tries Markdown parser
+// 5. If all fail, throws exception
+```
+
+### With Custom Parsers
+
+```php
+// Create custom parser
+class YamlParser implements ParserInterface {
+    public function parse(string $text): mixed {
+        // Extract YAML from code blocks
+        if (preg_match('/```yaml\s*([\s\S]*?)\s*```/', $text, $matches)) {
+            return yaml_parse($matches[1]);
+        }
+        return yaml_parse($text);
+    }
+    
+    public function getFormatInstructions(): string {
+        return "Return your response as YAML in a ```yaml code block.";
+    }
+    
+    public function getType(): string {
+        return 'yaml';
+    }
+}
+
+// Add to chain
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),
+    new YamlParser(),  // Custom parser
+    new XmlParser(),
+]);
+```
+
+### Benefits
+
+- ✅ **Automatic**: No need to know format ahead of time
+- ✅ **Robust**: Fallback if primary parser fails
+- ✅ **Flexible**: Easy to add new parsers
+- ✅ **Clean**: Each parser has single responsibility
+
+### Priority Ordering
+
+Order parsers by likelihood or preference:
+
+```php
+// ✅ Good - Most common format first
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),  // Most LLMs prefer JSON
+    new MarkdownParser(),       // Often used for structured text
+    new XmlParser(),            // Less common
+]);
+
+// ❌ Less optimal - Rare format first
+$chain = new ResponseParserChain([
+    new XmlParser(),            // Rarely used
+    new JsonResponseParser(),   // Should be first
+]);
+```
+
+### Error Handling
+
+```php
+use ClaudeAgents\Parsers\ResponseParserChain;
+
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),
+    new XmlParser(),
+]);
+
+try {
+    $result = $chain->parse($response);
+} catch (\RuntimeException $e) {
+    // All parsers failed
+    $logger->error('Failed to parse response', [
+        'response' => $response,
+        'error' => $e->getMessage(),
+    ]);
+    
+    // Fallback behavior
+    $result = ['raw' => $response, 'parsed' => false];
+}
+```
+
+### Integration with Agents
+
+```php
+use ClaudeAgents\Agent;
+use ClaudeAgents\Parsers\ResponseParserChain;
+
+// Create chain
+$parserChain = new ResponseParserChain([
+    new JsonResponseParser(),
+    new MarkdownParser(),
+]);
+
+// Use with agent
+$agent = Agent::create($client)
+    ->withTool($tools)
+    ->withSystemPrompt(
+        'Respond with structured data. ' .
+        $parserChain->getFormatInstructions()
+    );
+
+$result = $agent->run($task);
+$parsed = $parserChain->parse($result->getAnswer());
+```
+
+### Comparison with ParserFactory
+
+**ResponseParserChain - Manual configuration:**
+```php
+// You control exactly which parsers and in what order
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),
+    new XmlParser(),
+]);
+$result = $chain->parse($response);
+```
+
+**ParserFactory - Automatic detection:**
+```php
+// Factory auto-detects format
+$factory = ParserFactory::create();
+$type = $factory->detectType($response);
+$parser = $factory->get($type);
+$result = $parser->parse($response);
+```
+
+### Best Practices
+
+**✅ Good - Ordered by likelihood:**
+```php
+$chain = new ResponseParserChain([
+    new JsonResponseParser(),  // 80% of responses
+    new MarkdownParser(),       // 15% of responses
+    new XmlParser(),            // 5% of responses
+]);
+```
+
+**✅ Good - With schema validation:**
+```php
+$jsonParser = (new JsonResponseParser())->withSchema([
+    'type' => 'object',
+    'required' => ['status', 'data'],
+]);
+
+$chain = new ResponseParserChain([
+    $jsonParser,  // Strict validation
+    new MarkdownParser(),  // Fallback
+]);
+```
+
+**❌ Avoid - Too many parsers:**
+```php
+// Inefficient - tries 10 parsers on every response
+$chain = new ResponseParserChain([
+    /* 10 different parsers */
+]);
+// Better: Use only parsers you expect
+```
+
+### API Reference
+
+```php
+class ResponseParserChain implements ParserInterface
+{
+    public function __construct(array $parsers);
+    public function parse(string $text): mixed;
+    public function getFormatInstructions(): string;
+    public function getType(): string;
+}
+```
+
+---
+
 ## Parser Factory
 
 The `ParserFactory` provides convenient access to all parsers with auto-detection capabilities.

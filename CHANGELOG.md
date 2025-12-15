@@ -15,11 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This CHANGELOG file
 - CODE_OF_CONDUCT.md
 - SECURITY.md policy
+- Design patterns implementation: Factory, Builder, Observer (Events), Strategy, Template Method, Error Handler
+- AbstractAgent base class for SOLID agent architecture
+- AgentFactory for centralized agent creation with consistent configuration
+- AgentConfigBuilder for fluent configuration API
+- EventDispatcher for lifecycle monitoring and observability
+- TextContentExtractor utility for DRY code
+- TokenUsageFormatter utility for consistent token metadata
+- Comprehensive design patterns documentation (docs/DesignPatterns.md, docs/Factory.md, docs/Builder.md, docs/Events.md)
+- Event system example (examples/event_system_example.php)
 
 ### Changed
 - Updated README.md with CI badges and better documentation
 - Enhanced .gitignore configuration
 - Updated composer.json with better metadata
+- Refactored agents to use AbstractAgent base class eliminating ~400 lines of duplication
+- Made Agent properties (client, tools, config) protected for proper inheritance
+- Improved PHPStan compliance (Level 6, zero errors)
+- Enhanced code formatting and consistency across codebase
+
+### Fixed
+- PHPStan static analysis issues across multiple files
+- Code style issues detected by PHP CS Fixer
+- Type safety improvements in Agent, AgentHelpers, ErrorHandler, and other core classes
+- PlanExecuteReflectAgent return type to match AgentResult interface
 
 ## [0.1.0] - 2025-12-16
 

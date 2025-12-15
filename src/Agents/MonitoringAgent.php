@@ -9,6 +9,7 @@ use ClaudeAgents\Contracts\AgentInterface;
 use ClaudeAgents\Contracts\MonitorableInterface;
 use ClaudeAgents\Monitoring\Alert;
 use ClaudeAgents\Monitoring\Metric;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -173,7 +174,7 @@ class MonitoringAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $analysis = $this->extractTextContent($response->content ?? []);
+            $analysis = TextContentExtractor::extractFromResponse($response);
 
             if ($this->indicatesAnomaly($analysis)) {
                 return new Alert(
@@ -319,24 +320,6 @@ class MonitoringAgent implements AgentInterface
         }
 
         return $output;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

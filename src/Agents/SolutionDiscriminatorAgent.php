@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -98,7 +99,7 @@ class SolutionDiscriminatorAgent implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $rating = trim($this->extractTextContent($response->content ?? []));
+            $rating = trim(TextContentExtractor::extractFromResponse($response));
 
             return (float)$rating;
         } catch (\Throwable $e) {
@@ -130,18 +131,6 @@ class SolutionDiscriminatorAgent implements AgentInterface
 
         // Fallback: treat as single solution
         return [['id' => 'solution_1', 'content' => $task]];
-    }
-
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 
     public function getName(): string

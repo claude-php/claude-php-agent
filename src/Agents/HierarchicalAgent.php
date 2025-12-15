@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
-use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Hierarchical Agent (Master-Worker Pattern).
@@ -17,18 +15,14 @@ use Psr\Log\NullLogger;
  * multi-domain tasks. The master decomposes tasks, delegates to
  * workers, and synthesizes results.
  */
-class HierarchicalAgent implements AgentInterface
+class HierarchicalAgent extends AbstractAgent
 {
-    private ClaudePhp $client;
-    private string $name;
-    private string $model;
-    private int $maxTokens;
-    private LoggerInterface $logger;
-
     /**
      * @var array<string, WorkerAgent>
      */
     private array $workers = [];
+
+    protected const DEFAULT_NAME = 'master_agent';
 
     /**
      * @param ClaudePhp $client The Claude API client
@@ -40,11 +34,7 @@ class HierarchicalAgent implements AgentInterface
      */
     public function __construct(ClaudePhp $client, array $options = [])
     {
-        $this->client = $client;
-        $this->name = $options['name'] ?? 'master_agent';
-        $this->model = $options['model'] ?? 'claude-sonnet-4-5';
-        $this->maxTokens = $options['max_tokens'] ?? 2048;
-        $this->logger = $options['logger'] ?? new NullLogger();
+        parent::__construct($client, $options);
     }
 
     /**
@@ -78,7 +68,7 @@ class HierarchicalAgent implements AgentInterface
 
     public function run(string $task): AgentResult
     {
-        $this->logger->info('Starting hierarchical execution', ['task' => substr($task, 0, 100)]);
+        $this->logStart($task);
 
         $startTime = microtime(true);
         $totalTokens = ['input' => 0, 'output' => 0];
@@ -86,7 +76,7 @@ class HierarchicalAgent implements AgentInterface
 
         try {
             // Step 1: Decompose the task
-            $this->logger->debug('Step 1: Decomposing task');
+            $this->logDebug('Step 1: Decomposing task');
             $subtasks = $this->decompose($task, $totalTokens);
 
             if (empty($subtasks)) {
@@ -94,13 +84,13 @@ class HierarchicalAgent implements AgentInterface
             }
 
             // Step 2: Execute subtasks with workers
-            $this->logger->debug('Step 2: Executing subtasks', ['count' => count($subtasks)]);
+            $this->logDebug('Step 2: Executing subtasks', ['count' => count($subtasks)]);
 
             foreach ($subtasks as $i => $subtask) {
                 $workerName = $subtask['agent'] ?? 'default';
                 $subtaskText = $subtask['task'] ?? '';
 
-                $this->logger->debug("Executing subtask {$i}", [
+                $this->logDebug("Executing subtask {$i}", [
                     'worker' => $workerName,
                     'task' => substr($subtaskText, 0, 50),
                 ]);
@@ -128,7 +118,7 @@ class HierarchicalAgent implements AgentInterface
             }
 
             // Step 3: Synthesize results
-            $this->logger->debug('Step 3: Synthesizing results');
+            $this->logDebug('Step 3: Synthesizing results');
             $finalAnswer = $this->synthesize($task, $workerResults, $totalTokens);
 
             $duration = microtime(true) - $startTime;
@@ -149,15 +139,10 @@ class HierarchicalAgent implements AgentInterface
                 ],
             );
         } catch (\Throwable $e) {
-            $this->logger->error("Hierarchical execution failed: {$e->getMessage()}");
+            $this->logError($e->getMessage());
 
             return AgentResult::failure($e->getMessage());
         }
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     /**
@@ -195,11 +180,11 @@ class HierarchicalAgent implements AgentInterface
             $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
             $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-            $text = $this->extractTextContent($response->content ?? []);
+            $text = TextContentExtractor::extractFromResponse($response);
 
             return $this->parseSubtasks($text);
         } catch (\Throwable $e) {
-            $this->logger->error("Decomposition failed: {$e->getMessage()}");
+            $this->logError("Decomposition failed: {$e->getMessage()}");
 
             return [['agent' => 'default', 'task' => $task]];
         }
@@ -271,29 +256,11 @@ class HierarchicalAgent implements AgentInterface
             $tokenUsage['input'] += $response->usage->input_tokens ?? 0;
             $tokenUsage['output'] += $response->usage->output_tokens ?? 0;
 
-            return $this->extractTextContent($response->content ?? []);
+            return TextContentExtractor::extractFromResponse($response);
         } catch (\Throwable $e) {
-            $this->logger->error("Synthesis failed: {$e->getMessage()}");
+            $this->logError("Synthesis failed: {$e->getMessage()}");
 
             return 'Synthesis error: ' . $e->getMessage();
         }
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

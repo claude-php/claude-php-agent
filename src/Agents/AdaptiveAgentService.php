@@ -6,6 +6,7 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -252,7 +253,7 @@ class AdaptiveAgentService implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
             $json = preg_replace('/```(?:json)?\s*/', '', $json);
             $json = trim($json);
 
@@ -445,7 +446,7 @@ class AdaptiveAgentService implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $json = $this->extractTextContent($response->content ?? []);
+            $json = TextContentExtractor::extractFromResponse($response);
             $json = preg_replace('/```(?:json)?\s*/', '', $json);
             $json = trim($json);
 
@@ -509,7 +510,7 @@ class AdaptiveAgentService implements AgentInterface
                 'messages' => [['role' => 'user', 'content' => $prompt]],
             ]);
 
-            $reframed = $this->extractTextContent($response->content ?? []);
+            $reframed = TextContentExtractor::extractFromResponse($response);
 
             return trim($reframed);
         } catch (\Throwable $e) {
@@ -571,17 +572,6 @@ class AdaptiveAgentService implements AgentInterface
      * @param array $content Response content blocks
      * @return string Extracted text
      */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-        foreach ($content as $block) {
-            if (is_array($block) && ($block['type'] ?? '') === 'text') {
-                $texts[] = $block['text'] ?? '';
-            }
-        }
-
-        return implode("\n", $texts);
-    }
 
     /**
      * Get the agent name.
