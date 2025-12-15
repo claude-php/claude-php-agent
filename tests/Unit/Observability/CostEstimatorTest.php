@@ -17,7 +17,7 @@ class CostEstimatorTest extends TestCase
         $cost = $estimator->estimateCost('claude-sonnet-4-5', 1000, 500);
 
         $expectedCost = (1000 * 3 + 500 * 15) / 1_000_000;
-        $this->assertEquals($expectedCost, $cost);
+        $this->assertEqualsWithDelta($expectedCost, $cost, 0.0001);
     }
 
     public function testGetPricing(): void

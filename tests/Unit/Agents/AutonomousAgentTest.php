@@ -32,7 +32,7 @@ class AutonomousAgentTest extends TestCase
 
     public function testConstructorRequiresGoal(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\ClaudeAgents\Exceptions\ConfigurationException::class);
         $this->expectExceptionMessage('Goal is required');
 
         $client = $this->createMock(ClaudePhp::class);

@@ -7,38 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Production-ready configuration files (PHP CS Fixer, PHPStan, EditorConfig)
-- GitHub Actions workflows for CI/CD (tests, code quality, security)
-- GitHub issue templates for bug reports and feature requests
-- Pull request template
-- This CHANGELOG file
-- CODE_OF_CONDUCT.md
-- SECURITY.md policy
-- Design patterns implementation: Factory, Builder, Observer (Events), Strategy, Template Method, Error Handler
-- AbstractAgent base class for SOLID agent architecture
-- AgentFactory for centralized agent creation with consistent configuration
-- AgentConfigBuilder for fluent configuration API
-- EventDispatcher for lifecycle monitoring and observability
-- TextContentExtractor utility for DRY code
-- TokenUsageFormatter utility for consistent token metadata
-- Comprehensive design patterns documentation (docs/DesignPatterns.md, docs/Factory.md, docs/Builder.md, docs/Events.md)
-- Event system example (examples/event_system_example.php)
+## [0.1.1] - 2025-12-16
 
 ### Changed
-- Updated README.md with CI badges and better documentation
-- Enhanced .gitignore configuration
-- Updated composer.json with better metadata
-- Refactored agents to use AbstractAgent base class eliminating ~400 lines of duplication
-- Made Agent properties (client, tools, config) protected for proper inheritance
-- Improved PHPStan compliance (Level 6, zero errors)
-- Enhanced code formatting and consistency across codebase
+- Updated `claude-php/claude-php-sdk` from ^0.1 to ^0.5 for latest features and fixes
+- Updated `phpstan/phpstan` from ^1.10 to ^2.1 for improved static analysis
+- Updated `friendsofphp/php-cs-fixer` from ^3.0 to ^3.92 for latest code style rules
+- Updated GitHub Actions dependencies:
+  - `actions/checkout` from v4 to v6
+  - `actions/cache` from v4 to v5
+  - `codecov/codecov-action` from v4 to v5
 
 ### Fixed
-- PHPStan static analysis issues across multiple files
-- Code style issues detected by PHP CS Fixer
-- Type safety improvements in Agent, AgentHelpers, ErrorHandler, and other core classes
-- PlanExecuteReflectAgent return type to match AgentResult interface
+- Test failures due to changes in agent logging behavior
+- Test failures related to ConfigurationException type changes
+- Test assertions for cost tracking with proper budget values
+- Code style issues (spacing in arrow functions and anonymous classes)
 
 ## [0.1.0] - 2025-12-16
 
@@ -98,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PSR-3 logger interface
 - AMPHP for async operations
 
-[Unreleased]: https://github.com/claude-php/agent/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/claude-php/agent/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/claude-php/agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/claude-php/agent/releases/tag/v0.1.0
 

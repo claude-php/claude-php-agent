@@ -113,7 +113,7 @@ class MicroAgentTest extends TestCase
     public function testExecuteWithRetryFailsAfterMaxAttempts(): void
     {
         $this->expectException(\Throwable::class);
-        $this->expectExceptionMessage('API Error');
+        $this->expectExceptionMessage('failed after all retry attempts');
 
         $this->messages->shouldReceive('create')
             ->times(3)

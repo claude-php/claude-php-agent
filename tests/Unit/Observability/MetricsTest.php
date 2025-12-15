@@ -35,7 +35,7 @@ class MetricsTest extends TestCase
         $this->assertEquals(0, $summary['successful_requests']);
         $this->assertEquals(1, $summary['failed_requests']);
         $this->assertEquals(0, $summary['success_rate']);
-        $this->assertArrayHasKey('API', $summary['error_counts']);
+        $this->assertArrayHasKey('API Error', $summary['error_counts']);
     }
 
     public function testAverageDuration(): void

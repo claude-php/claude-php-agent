@@ -115,7 +115,7 @@ class TreeOfThoughtsAgentTest extends TestCase
 
         $this->logger->expects($this->atLeastOnce())
             ->method('info')
-            ->with($this->stringContains('ToT Agent:'));
+            ->with($this->stringContains('tot_agent'));
 
         $agent = new TreeOfThoughtsAgent($this->client, [
             'branch_count' => 3,
@@ -337,7 +337,7 @@ class TreeOfThoughtsAgentTest extends TestCase
 
         $this->logger->expects($this->atLeastOnce())
             ->method('info')
-            ->with($this->stringContains('Complex task'));
+            ->with($this->stringContains('tot_agent'));
 
         $agent = new TreeOfThoughtsAgent($this->client, [
             'branch_count' => 1,

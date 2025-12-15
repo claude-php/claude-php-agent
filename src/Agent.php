@@ -573,7 +573,7 @@ class Agent implements AgentInterface
             if ($this->retryConfig !== null) {
                 $retryHandler = new RetryHandler($this->retryConfig, $this->logger);
                 $context = $retryHandler->execute(
-                    fn() => $this->loopStrategy->execute($context)
+                    fn () => $this->loopStrategy->execute($context)
                 );
             } else {
                 // Execute the loop strategy

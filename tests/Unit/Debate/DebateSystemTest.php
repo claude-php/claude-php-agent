@@ -147,7 +147,7 @@ class DebateSystemTest extends TestCase
 
     public function testDebateThrowsExceptionWithNoAgents(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\ClaudeAgents\Exceptions\ConfigurationException::class);
         $this->expectExceptionMessage('No agents added to debate system');
 
         $system = new DebateSystem($this->client);

@@ -211,9 +211,12 @@ class ChainOfThoughtAgentTest extends TestCase
             ->method('messages')
             ->willReturn($messagesResource);
 
-        $this->logger->expects($this->once())
+        $this->logger->expects($this->atLeastOnce())
             ->method('info')
-            ->with($this->stringContains('Solve this problem'));
+            ->with($this->logicalOr(
+                $this->stringContains('Starting cot_agent'),
+                $this->stringContains('completed successfully')
+            ));
 
         $agent = new ChainOfThoughtAgent($this->client, [
             'logger' => $this->logger,

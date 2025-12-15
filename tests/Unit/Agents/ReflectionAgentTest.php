@@ -399,7 +399,7 @@ class ReflectionAgentTest extends TestCase
         $this->logger->expects($this->atLeastOnce())
             ->method('info')
             ->with($this->logicalOr(
-                $this->stringContains('Starting reflection agent'),
+                $this->stringContains('Starting reflection_agent'),
                 $this->stringContains('Quality threshold met')
             ));
 

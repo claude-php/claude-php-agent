@@ -571,7 +571,7 @@ class AgentHelpers
     public static function createConsoleLogger(string $name = 'agent', string $level = 'debug'): LoggerInterface
     {
         // Use a simple console logger
-        return new class($name, $level) implements LoggerInterface {
+        return new class ($name, $level) implements LoggerInterface {
             private string $name;
             private array $levelMap = [
                 'debug' => 0,

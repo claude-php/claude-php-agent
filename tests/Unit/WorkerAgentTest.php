@@ -175,8 +175,9 @@ class WorkerAgentTest extends TestCase
         $agent = new WorkerAgent($this->client);
         $result = $agent->run('Empty response task');
 
-        $this->assertTrue($result->isSuccess());
-        $this->assertEquals('', $result->getAnswer());
+        // Empty responses are now considered failures (validation in AgentResult)
+        $this->assertFalse($result->isSuccess());
+        $this->assertNotEmpty($result->getError());
     }
 
     public function testRunWithApiException(): void

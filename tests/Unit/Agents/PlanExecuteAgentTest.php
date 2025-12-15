@@ -392,7 +392,7 @@ class PlanExecuteAgentTest extends TestCase
         $this->logger->expects($this->once())
             ->method('info')
             ->with(
-                $this->equalTo('Starting plan-execute agent'),
+                $this->stringContains('Starting plan_execute_agent'),
                 $this->arrayHasKey('task')
             );
 

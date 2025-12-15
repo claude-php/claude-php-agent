@@ -24,16 +24,16 @@ class CostTrackerTest extends TestCase
     public function testBudget(): void
     {
         $tracker = new CostTracker();
-        $tracker->setBudget(1.0);
+        $tracker->setBudget(10.0);
 
-        $this->assertEquals(1.0, $tracker->getBudget());
-        $this->assertEquals(1.0, $tracker->getRemainingBudget());
+        $this->assertEquals(10.0, $tracker->getBudget());
+        $this->assertEquals(10.0, $tracker->getRemainingBudget());
         $this->assertFalse($tracker->isBudgetExceeded());
 
         $tracker->record('claude-sonnet-4-5', 100_000, 50_000);
 
         $remaining = $tracker->getRemainingBudget();
-        $this->assertLessThan(1.0, $remaining);
+        $this->assertLessThan(10.0, $remaining);
         $this->assertGreaterThan(0, $remaining);
     }
 
