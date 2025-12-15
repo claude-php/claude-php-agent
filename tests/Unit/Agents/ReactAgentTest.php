@@ -7,6 +7,7 @@ namespace ClaudeAgents\Tests\Unit\Agents;
 use ClaudeAgents\Agent;
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Agents\ReactAgent;
+use ClaudeAgents\Progress\AgentUpdate;
 use ClaudeAgents\Tools\Tool;
 use ClaudePhp\ClaudePhp;
 use ClaudePhp\Resources\Messages\Messages;
@@ -203,6 +204,55 @@ class ReactAgentTest extends TestCase
         });
 
         $this->assertSame($agent, $result); // Fluent interface
+    }
+
+    public function testOnUpdate(): void
+    {
+        $callbackCalled = false;
+        $agent = new ReactAgent($this->mockClient);
+
+        $result = $agent->onUpdate(function () use (&$callbackCalled) {
+            $callbackCalled = true;
+        });
+
+        $this->assertSame($agent, $result); // Fluent interface
+    }
+
+    public function testUpdateCallbackEmitsEventsDuringRun(): void
+    {
+        $response = $this->createMockMessage([
+            ['type' => 'text', 'text' => 'Task completed'],
+        ]);
+
+        $this->mockClient->shouldReceive('messages')
+            ->once()
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->once()
+            ->andReturn($response);
+
+        $updates = [];
+        $types = [];
+
+        $agent = new ReactAgent($this->mockClient);
+        $agent->onUpdate(function (AgentUpdate $update) use (&$updates, &$types): void {
+            $updates[] = $update;
+            $types[] = $update->getType();
+        });
+
+        $agent->run('Test task');
+
+        $this->assertContains('agent.start', $types);
+        $this->assertContains('llm.iteration', $types);
+        $this->assertContains('agent.completed', $types);
+
+        // Ensure iteration payload is present
+        $iterationUpdates = array_values(array_filter($updates, fn (AgentUpdate $u) => $u->getType() === 'llm.iteration'));
+        $this->assertNotEmpty($iterationUpdates);
+        $data = $iterationUpdates[0]->getData();
+        $this->assertSame(1, $data['iteration']);
+        $this->assertArrayHasKey('text', $data);
     }
 
     public function testRun(): void

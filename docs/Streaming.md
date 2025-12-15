@@ -18,6 +18,7 @@ The streaming system enables real-time processing of Claude's responses as they'
 
 ```php
 use ClaudeAgents\Agent;
+use ClaudeAgents\Progress\AgentUpdate;
 use ClaudeAgents\Streaming\StreamingLoop;
 use ClaudeAgents\Streaming\Handlers\ConsoleHandler;
 use ClaudePhp\ClaudePhp;
@@ -34,6 +35,14 @@ $streamingLoop = new StreamingLoop();
 $streamingLoop->addHandler(new ConsoleHandler(newline: true));
 
 $agent->withLoopStrategy($streamingLoop);
+
+// Optional: unified progress updates (includes stream deltas as `llm.stream`)
+$agent->onUpdate(function (AgentUpdate $update): void {
+    if ($update->getType() === 'llm.stream') {
+        $event = $update->getData()['event'] ?? [];
+        // e.g. forward to SSE/WebSocket
+    }
+});
 
 // Run and watch real-time output
 $result = $agent->run('Your task here');

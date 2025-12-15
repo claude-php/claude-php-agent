@@ -632,11 +632,15 @@ class AgentContext
         $metadata = [
             'token_usage' => $this->getTokenUsage(),
             'tool_calls' => $this->toolCalls,
-            'metadata' => $this->metadata,
             'execution_time' => $this->getExecutionTime(),
             'start_time' => $this->startTime,
             'end_time' => $this->endTime,
         ];
+        if (! empty($this->metadata)) {
+            // Expose loop-specific metadata (e.g. reflection scores, plan steps)
+            // at the top level of AgentResult::getMetadata() for compatibility.
+            $metadata = array_merge($metadata, $this->metadata);
+        }
 
         if ($this->hasFailed()) {
             return AgentResult::failure(

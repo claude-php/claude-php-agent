@@ -591,6 +591,13 @@ class Agent implements AgentInterface
                 'iteration' => $context->getIteration(),
             ]);
 
+            // Ensure callers always receive a terminal failure event.
+            $this->emitUpdate('agent.failed', [
+                'iterations' => $context->getIteration(),
+                'token_usage' => $context->getTokenUsage(),
+                'error' => $e->getMessage(),
+            ]);
+
             return AgentResult::failure(
                 error: $e->getMessage(),
                 messages: $context->getMessages(),

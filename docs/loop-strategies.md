@@ -384,6 +384,27 @@ $reflectionLoop->onReflection(function ($refinement, $score, $feedback) {
 });
 ```
 
+#### Unified Progress Updates (One Callback for Everything)
+
+Instead of wiring multiple loop-specific callbacks, you can attach a single callback at the `Agent` level that receives structured events across *all* loop strategies:
+
+```php
+use ClaudeAgents\Agent;
+use ClaudeAgents\Progress\AgentUpdate;
+
+$agent = Agent::create($client)
+    ->withLoopStrategy(new PlanExecuteLoop())
+    ->onUpdate(function (AgentUpdate $update): void {
+        // Common event types:
+        // - agent.start / agent.completed / agent.failed
+        // - llm.iteration
+        // - tool.executed
+        // - plan.created / plan.step_completed (PlanExecuteLoop)
+        // - reflection.scored (ReflectionLoop)
+        // - llm.stream (StreamingLoop)
+    });
+```
+
 ## Performance Considerations
 
 ### Token Usage

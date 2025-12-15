@@ -13,6 +13,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use ClaudeAgents\Agent;
 use ClaudeAgents\Config\AgentConfig;
+use ClaudeAgents\Progress\AgentUpdate;
 use ClaudeAgents\Streaming\StreamingLoop;
 use ClaudeAgents\Streaming\Handlers\ConsoleHandler;
 use ClaudeAgents\Tools\Tool;
@@ -44,6 +45,14 @@ $agent = Agent::create($client)
     ->withConfig($config)
     ->withTool($calculator)
     ->maxIterations(3);
+
+// Optional: unified progress updates (includes streaming deltas)
+$agent->onUpdate(function (AgentUpdate $update): void {
+    if ($update->getType() === 'llm.stream') {
+        // Each event contains the streamed chunk metadata.
+        // $event = $update->getData()['event'] ?? [];
+    }
+});
 
 // Add streaming loop
 $streamingLoop = new StreamingLoop();

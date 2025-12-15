@@ -363,17 +363,44 @@ $agent->onIteration(function ($iteration, $response, $context) use (&$iterationL
     $iterationLog[] = [
         'iteration' => $iteration,
         'timestamp' => microtime(true),
-        'message' => $context->getAnswer(),
+        'message' => (function () use ($response): string {
+            $text = '';
+            foreach (($response->content ?? []) as $block) {
+                if (($block['type'] ?? null) === 'text') {
+                    $text .= $block['text'] ?? '';
+                }
+            }
+            return $text;
+        })(),
     ];
     
     echo "\n=== Iteration {$iteration} ===\n";
-    echo "Current reasoning: {$context->getAnswer()}\n";
+    echo "Latest model text: " . $iterationLog[count($iterationLog) - 1]['message'] . "\n";
 });
 
 $result = $agent->run('Your task...');
 
 // Review the log
 print_r($iterationLog);
+```
+
+### Unified Progress Updates (Recommended)
+
+If you’re building a UI (websocket/SSE/CLI) and want a single stream of structured updates:
+
+```php
+use ClaudeAgents\Progress\AgentUpdate;
+
+$agent->onUpdate(function (AgentUpdate $update): void {
+    // Examples:
+    // - agent.start / agent.completed / agent.failed
+    // - llm.iteration (includes latest text)
+    // - tool.executed
+    if ($update->getType() === 'llm.iteration') {
+        $data = $update->getData();
+        echo "[iter {$data['iteration']}] " . ($data['text'] ?? '') . "\n";
+    }
+});
 ```
 
 ### Tool Execution Monitoring
