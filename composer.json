@@ -1,0 +1,97 @@
+{
+    "name": "claude-php/agent",
+    "description": "A powerful PHP framework for building AI agents with Claude, featuring ReAct loops, tool orchestration, and advanced agentic patterns",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "claude",
+        "anthropic",
+        "ai",
+        "agent",
+        "llm",
+        "react",
+        "tool-use",
+        "agentic",
+        "autonomous-agents",
+        "multi-agent",
+        "rag",
+        "chain-of-thought",
+        "plan-execute",
+        "reflection"
+    ],
+    "homepage": "https://github.com/claude-php/agent",
+    "support": {
+        "issues": "https://github.com/claude-php/agent/issues",
+        "source": "https://github.com/claude-php/agent",
+        "docs": "https://github.com/claude-php/agent/blob/main/README.md"
+    },
+    "authors": [
+        {
+            "name": "Dale Hurley",
+            "email": "dale@example.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3",
+        "claude-php/claude-php-sdk": "^0.1",
+        "psr/log": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "phpstan/phpstan": "^1.10",
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "ClaudeAgents\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ClaudeAgents\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testdox",
+        "test:unit": "phpunit --testsuite=Unit --testdox",
+        "test:integration": "phpunit --testsuite=Integration --testdox",
+        "test:coverage": "phpunit --coverage-html coverage --coverage-text",
+        "analyse": "phpstan analyse src --level=6 --memory-limit=512M",
+        "format": "php-cs-fixer fix --verbose",
+        "format:check": "php-cs-fixer fix --dry-run --diff --verbose",
+        "check": [
+            "@format:check",
+            "@analyse",
+            "@test"
+        ],
+        "check:full": [
+            "@format:check",
+            "@analyse",
+            "@test:coverage"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run all tests with testdox output",
+        "test:unit": "Run unit tests only",
+        "test:integration": "Run integration tests only",
+        "test:coverage": "Run tests with coverage report",
+        "analyse": "Run PHPStan static analysis",
+        "format": "Fix code style issues with PHP CS Fixer",
+        "format:check": "Check code style without making changes",
+        "check": "Run all quality checks (format, analyse, test)",
+        "check:full": "Run all quality checks with coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
+

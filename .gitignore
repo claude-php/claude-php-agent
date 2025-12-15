@@ -1,0 +1,41 @@
+# Dependencies
+/vendor/
+composer.lock
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.implementation/
+*.code-workspace
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Cache
+.php-cs-fixer.cache
+.phpunit.result.cache
+phpstan.neon.local
+
+# Build artifacts
+/build/
+/dist/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+/coverage/
+.phpunit.cache/
+
+# State files
+*.json.state
+agent_state.json

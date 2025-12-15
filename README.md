@@ -1,0 +1,476 @@
+# Claude PHP Agent Framework
+
+[![Tests](https://github.com/claude-php/agent/actions/workflows/tests.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/tests.yml)
+[![Code Quality](https://github.com/claude-php/agent/actions/workflows/code-quality.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/code-quality.yml)
+[![Security](https://github.com/claude-php/agent/actions/workflows/security.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/security.yml)
+[![PHP Version](https://img.shields.io/badge/php-%5E8.1%7C%5E8.2%7C%5E8.3-blue)](https://www.php.net/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Latest Stable Version](https://img.shields.io/packagist/v/claude-php/agent.svg)](https://packagist.org/packages/claude-php/agent)
+[![Total Downloads](https://img.shields.io/packagist/dt/claude-php/agent.svg)](https://packagist.org/packages/claude-php/agent)
+
+A powerful PHP framework for building AI agents with Claude, featuring ReAct loops, tool orchestration, hierarchical agents, and advanced agentic patterns.
+
+## Features
+
+- 🔄 **Loop Strategies** - ReactLoop, PlanExecuteLoop, ReflectionLoop, and StreamingLoop
+- 🛠️ **Tool System** - Easy tool definition, registration, and execution
+- 🧠 **Memory Management** - Persistent state across agent iterations
+- 🏗️ **Agent Patterns** - ReAct, Plan-Execute, Reflection, Hierarchical, and more
+- 🤖 **Adaptive Agent Service** - Intelligent agent selection, validation, and auto-adaptation
+- 📊 **Output Parsers** - JSON, XML, Markdown, CSV, Lists, and Regex with auto-detection
+- 🔗 **Chain Composition** - Sequential, parallel, and conditional chain execution
+- ⚡ **Production Ready** - Retry logic, error handling, logging, and monitoring
+- 🚀 **Async/Concurrent** - AMPHP-powered parallel execution for batch operations
+- 🎯 **Extensible** - Build custom agents and patterns with ease
+
+## Installation
+
+```bash
+composer require claude-php/agent
+```
+
+## Quick Start
+
+```php
+<?php
+
+use ClaudeAgents\Agent;
+use ClaudeAgents\Tools\Tool;
+
+// Create a simple calculator tool
+$calculator = Tool::create('calculate')
+    ->description('Perform mathematical calculations')
+    ->parameter('expression', 'string', 'Math expression to evaluate')
+    ->required('expression')
+    ->handler(function (array $input): string {
+        return (string) eval("return {$input['expression']};");
+    });
+
+// Create an agent with the tool
+$agent = Agent::create()
+    ->withTool($calculator)
+    ->withSystemPrompt('You are a helpful assistant that can perform calculations.');
+
+// Run the agent
+$result = $agent->run('What is 25 * 17 + 100?');
+
+echo $result->getAnswer();
+```
+
+## Core Concepts
+
+### Loop Strategies
+
+The framework provides multiple loop strategies for different types of tasks:
+
+#### ReactLoop (Default)
+The **Reason-Act-Observe** pattern for general-purpose tasks:
+
+```php
+use ClaudeAgents\Loops\ReactLoop;
+
+$agent = Agent::create()
+    ->withLoopStrategy(new ReactLoop())
+    ->withTools([$searchTool, $calculatorTool])
+    ->maxIterations(10);
+```
+
+#### PlanExecuteLoop
+Plan first, then execute systematically for complex multi-step tasks:
+
+```php
+use ClaudeAgents\Loops\PlanExecuteLoop;
+
+$loop = new PlanExecuteLoop(allowReplan: true);
+$loop->onPlanCreated(function ($steps) {
+    echo "Plan: " . count($steps) . " steps\n";
+});
+
+$agent = Agent::create()
+    ->withLoopStrategy($loop)
+    ->withTools($tools);
+```
+
+#### ReflectionLoop
+Generate, reflect, and refine for high-quality outputs:
+
+```php
+use ClaudeAgents\Loops\ReflectionLoop;
+
+$loop = new ReflectionLoop(
+    maxRefinements: 3,
+    qualityThreshold: 8
+);
+
+$agent = Agent::create()
+    ->withLoopStrategy($loop);
+```
+
+See the [Loop Strategies Guide](docs/loop-strategies.md) for detailed documentation.
+
+### Tools
+
+Tools give Claude the ability to interact with the world:
+
+```php
+use ClaudeAgents\Tools\Tool;
+
+// Fluent API for tool creation
+$weatherTool = Tool::create('get_weather')
+    ->description('Get current weather for a location')
+    ->parameter('city', 'string', 'City name')
+    ->parameter('units', 'string', 'Temperature units (celsius/fahrenheit)', false)
+    ->required('city')
+    ->handler(function (array $input): string {
+        // Your weather API call here
+        return json_encode(['temp' => 72, 'conditions' => 'sunny']);
+    });
+```
+
+### Agent Patterns
+
+#### Basic ReAct Agent
+
+```php
+use ClaudeAgents\Agents\ReactAgent;
+
+$agent = new ReactAgent($client, [
+    'tools' => [$tool1, $tool2],
+    'max_iterations' => 10,
+    'system' => 'You are a helpful assistant.',
+]);
+
+$result = $agent->run('Complete this task...');
+```
+
+#### Hierarchical Agent (Master-Worker)
+
+```php
+use ClaudeAgents\Agents\HierarchicalAgent;
+use ClaudeAgents\Agents\WorkerAgent;
+
+$master = new HierarchicalAgent($client);
+
+$master->registerWorker('researcher', new WorkerAgent($client, [
+    'specialty' => 'research and information gathering',
+]));
+
+$master->registerWorker('writer', new WorkerAgent($client, [
+    'specialty' => 'writing and content creation',
+]));
+
+$result = $master->run('Research PHP 8 features and write a summary');
+```
+
+#### Reflection Agent
+
+```php
+use ClaudeAgents\Agents\ReflectionAgent;
+
+$agent = new ReflectionAgent($client, [
+    'max_refinements' => 3,
+    'quality_threshold' => 8,
+]);
+
+$result = $agent->run('Write a function to validate email addresses');
+// Agent will generate, reflect, and refine until quality threshold is met
+```
+
+### Memory & State
+
+```php
+use ClaudeAgents\Memory\Memory;
+use ClaudeAgents\Memory\FileMemory;
+
+// In-memory state
+$memory = new Memory();
+$memory->set('user_preference', 'dark_mode');
+
+// Persistent file-based memory
+$memory = new FileMemory('/path/to/state.json');
+
+$agent = Agent::create()
+    ->withMemory($memory)
+    ->run('Remember my preferences...');
+```
+
+### Production Features
+
+```php
+use ClaudeAgents\Agent;
+use Psr\Log\LoggerInterface;
+
+$agent = Agent::create()
+    ->withLogger($psrLogger)
+    ->maxRetries(3)
+    ->retryDelay(1000) // ms
+    ->timeout(30.0)
+    ->onError(function (Throwable $e, int $attempt) {
+        // Handle errors
+    })
+    ->onToolExecution(function (string $tool, array $input, string $result) {
+        // Monitor tool usage
+    });
+```
+
+#### MAKER Agent (Massively Decomposed Agentic Processes)
+
+**⚡ NEW: Solve million-step tasks with near-zero error rates!**
+
+```php
+use ClaudeAgents\Agents\MakerAgent;
+
+// Based on: "Solving a Million-Step LLM Task with Zero Errors"
+// https://arxiv.org/html/2511.09030v1
+
+$maker = new MakerAgent($client, [
+    'voting_k' => 3,                    // First-to-ahead-by-3 voting
+    'enable_red_flagging' => true,      // Detect unreliable responses
+    'max_decomposition_depth' => 10,    // Extreme decomposition
+]);
+
+// Can reliably handle tasks requiring millions of steps
+$result = $maker->run('Solve this complex multi-step problem...');
+
+// Track detailed execution statistics
+$stats = $result->getMetadata()['execution_stats'];
+echo "Steps: {$stats['total_steps']}\n";
+echo "Votes: {$stats['votes_cast']}\n";
+echo "Error Rate: " . $result->getMetadata()['error_rate'] . "\n";
+```
+
+**Key Features:**
+- ✓ Extreme task decomposition into atomic subtasks
+- ✓ Multi-agent voting for error correction at each step
+- ✓ Red-flagging to detect and retry unreliable responses
+- ✓ Scales to organization-level tasks (millions of steps)
+- ✓ Sub-linear cost scaling with proper decomposition
+
+**Paper Results:** Successfully solved 20-disk Towers of Hanoi (1,048,575 moves) with ZERO errors!
+
+See [MAKER_IMPLEMENTATION.md](./MAKER_IMPLEMENTATION.md) for detailed documentation.
+
+#### Adaptive Agent Service
+
+**🎯 NEW: Intelligent agent selection with automatic validation and adaptation!**
+
+```php
+use ClaudeAgents\Agents\AdaptiveAgentService;
+
+// Create service that automatically selects the best agent
+$service = new AdaptiveAgentService($client, [
+    'max_attempts' => 3,              // Try up to 3 times
+    'quality_threshold' => 7.0,       // Require 7/10 quality
+    'enable_reframing' => true,       // Reframe on failure
+]);
+
+// Register various agents with their profiles
+$service->registerAgent('react', $reactAgent, [
+    'type' => 'react',
+    'complexity_level' => 'medium',
+    'quality' => 'standard',
+]);
+
+$service->registerAgent('reflection', $reflectionAgent, [
+    'type' => 'reflection',
+    'complexity_level' => 'medium',
+    'quality' => 'high',
+]);
+
+// Service automatically:
+// 1. Analyzes the task
+// 2. Selects the best agent
+// 3. Validates the result
+// 4. Retries with different agents if needed
+$result = $service->run('Your task here');
+
+echo "Agent used: {$result->getMetadata()['final_agent']}\n";
+echo "Quality: {$result->getMetadata()['final_quality']}/10\n";
+```
+
+**Key Features:**
+- ✓ Intelligent agent selection based on task analysis
+- ✓ Automatic quality validation and scoring
+- ✓ Adaptive retry with different agents on failure
+- ✓ Request reframing for better results
+- ✓ Performance tracking and learning
+
+See [docs/adaptive-agent-service.md](./docs/adaptive-agent-service.md) for detailed documentation.
+
+## Agent Patterns Reference
+
+| Pattern | Use Case | Scalability | Example |
+|---------|----------|-------------|---------|
+| **ReAct** | General-purpose autonomous tasks | ~100 steps | Research, calculations, data processing |
+| **Plan-Execute** | Complex multi-step tasks | ~1K steps | Project planning, workflows |
+| **Reflection** | Quality-critical outputs | ~500 steps | Code generation, writing |
+| **Hierarchical** | Multi-domain tasks | ~5K steps | Business analysis, reports |
+| **Chain-of-Thought** | Complex reasoning | ~500 steps | Math problems, logic puzzles |
+| **Tree-of-Thoughts** | Exploration tasks | ~1K steps | Creative writing, optimization |
+| **MAKER/MDAP** | Million-step tasks, zero errors | Millions+ | Long sequences, organization-level tasks |
+| **Monitoring** | System monitoring, anomaly detection | Real-time | Server metrics, performance tracking |
+| **Scheduler** | Task scheduling, cron jobs | Continuous | Automated workflows, batch processing |
+| **Alert** | Intelligent alerting, notifications | Real-time | System alerts, incident management |
+| **Reflex** | Rule-based responses | Instant | FAQs, simple automation |
+| **Model-Based** | State-aware decision making | ~500 steps | Planning, simulation |
+| **Utility-Based** | Optimization, trade-offs | ~100 steps | Resource allocation, decision support |
+| **Learning** | Adaptive behavior, feedback loops | Continuous | Personalization, strategy evolution |
+| **Collaboration** | Multi-agent coordination (AutoGen) | ~5K steps | Team workflows, complex research |
+| **TaskPrioritization** | Goal-driven task management (BabyAGI) | ~1K steps | Project breakdown, execution |
+| **Coordinator** | Agent orchestration, load balancing | ~10K steps | Distributed systems, agent networks |
+| **Dialog** | Conversational AI, context tracking | Continuous | Customer service, assistants |
+| **IntentClassifier** | Intent recognition, entity extraction | Instant | Command routing, NLU |
+| **EnvironmentSimulator** | What-if analysis, prediction | ~100 steps | Testing, planning |
+| **SolutionDiscriminator** | Solution evaluation, voting | ~50 steps | Quality assurance, selection |
+| **MemoryManager** | Knowledge management, retrieval | Continuous | Shared memory, context |
+| **AdaptiveAgentService** | Meta-agent selection & validation | Varies | Auto-optimization, quality assurance |
+
+## Configuration
+
+```php
+use ClaudeAgents\Config\AgentConfig;
+
+$config = new AgentConfig([
+    'model' => 'claude-sonnet-4-5',
+    'max_tokens' => 4096,
+    'max_iterations' => 10,
+    'temperature' => 0.7,
+    'timeout' => 30.0,
+    'retry' => [
+        'max_attempts' => 3,
+        'delay_ms' => 1000,
+        'multiplier' => 2,
+    ],
+]);
+
+$agent = Agent::create()->withConfig($config);
+```
+
+## Async & Concurrent Execution
+
+The framework leverages **AMPHP** for true asynchronous and concurrent execution:
+
+### Batch Processing
+
+Process multiple agent tasks concurrently:
+
+```php
+use ClaudeAgents\Async\BatchProcessor;
+
+$processor = BatchProcessor::create($agent);
+
+$processor->addMany([
+    'task1' => 'Summarize this document...',
+    'task2' => 'Analyze this data...',
+    'task3' => 'Generate a report...',
+]);
+
+// Execute with concurrency of 5
+$results = $processor->run(concurrency: 5);
+
+// Get statistics
+$stats = $processor->getStats();
+echo "Success rate: " . ($stats['success_rate'] * 100) . "%\n";
+```
+
+### Parallel Tool Execution
+
+Execute multiple tool calls simultaneously:
+
+```php
+use ClaudeAgents\Async\ParallelToolExecutor;
+
+$executor = new ParallelToolExecutor($tools);
+
+$calls = [
+    ['tool' => 'get_weather', 'input' => ['city' => 'London']],
+    ['tool' => 'get_time', 'input' => ['timezone' => 'UTC']],
+    ['tool' => 'calculate', 'input' => ['expression' => '42 * 8']],
+];
+
+// All execute in parallel!
+$results = $executor->execute($calls);
+```
+
+### Promise-Based Workflows
+
+Use promises for async operations:
+
+```php
+use ClaudeAgents\Async\Promise;
+
+$promises = $processor->runAsync();
+
+// Do other work...
+
+// Wait for all to complete
+$results = Promise::all($promises);
+```
+
+See [AMPHP_ASYNC.md](./AMPHP_ASYNC.md) for complete documentation.
+
+### Output Parsers
+
+Transform unstructured LLM responses into structured data:
+
+```php
+use ClaudeAgents\Parsers\ParserFactory;
+use ClaudeAgents\Chains\LLMChain;
+
+$factory = ParserFactory::create();
+
+// JSON with schema validation
+$jsonParser = $factory->json([
+    'type' => 'object',
+    'required' => ['sentiment', 'confidence']
+]);
+
+// Auto-detect and parse
+$result = $factory->autoParse($llmResponse);
+
+// Use with chains
+$chain = LLMChain::create($client)
+    ->withPromptTemplate($template)
+    ->withOutputParser(fn($text) => $jsonParser->parse($text));
+```
+
+**Available Parsers:**
+- **JsonParser** - Extract and validate JSON
+- **ListParser** - Parse bullet/numbered lists
+- **RegexParser** - Pattern-based extraction
+- **XmlParser** - Parse XML/HTML
+- **MarkdownParser** - Extract structured markdown
+- **CsvParser** - Parse CSV/TSV data
+- **ParserFactory** - Auto-detection and convenience methods
+
+See [Parsers Documentation](docs/Parsers.md) for complete guide.
+
+## Examples
+
+See the [examples](./examples) directory for complete working examples:
+
+- `basic_agent.php` - Simple ReAct agent
+- `multi_tool_agent.php` - Agent with multiple tools
+- `hierarchical_agent.php` - Master-worker pattern
+- `reflection_agent.php` - Self-improving agent
+- `production_agent.php` - Production-ready setup
+- `adaptive_agent_service_example.php` - **NEW!** Intelligent agent selection & validation
+- `amphp_async_example.php` - **NEW!** Concurrent & parallel execution
+- `maker_example.php` - **NEW!** MAKER framework for reliable multi-step tasks
+- `maker_towers_hanoi.php` - **NEW!** Million-step benchmark from research paper
+- `parsers-demo.php` - **NEW!** Output parsers for structured data extraction
+- `chain-composition-demo.php` - Chain composition patterns
+
+## Requirements
+
+- PHP 8.1+
+- claude-php/claude-php-sdk
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+

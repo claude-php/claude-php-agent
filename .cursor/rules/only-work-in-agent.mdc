@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+
+# Workspace Boundary Rule
+
+**IMPORTANT**: Only work within the `/Users/dalehurley/Code/claude-php-agent` folder.
+
+- ✅ **DO**: Make changes, create files, and modify code in `claude-php-agent`
+- ❌ **DO NOT**: Touch, modify, or make any changes to `Claude-PHP-SDK`
+
+The `Claude-PHP-SDK` folder is read-only for reference purposes. All development work must be confined to the `claude-php-agent` project.

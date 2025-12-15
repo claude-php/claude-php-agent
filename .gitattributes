@@ -1,0 +1,46 @@
+* text=auto eol=lf
+
+# Exclude files from export
+/.github export-ignore
+/.implementation export-ignore
+/tests export-ignore
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.php-cs-fixer.php export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml export-ignore
+/CONTRIBUTING.md export-ignore
+/CHANGELOG.md export-ignore
+/SECURITY.md export-ignore
+/claude-php-agent.code-workspace export-ignore
+*.md linguist-documentation
+
+# PHP files
+*.php text eol=lf
+*.php diff=php
+
+# JSON files
+*.json text eol=lf
+composer.lock -diff
+
+# YAML files
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# XML files
+*.xml text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
