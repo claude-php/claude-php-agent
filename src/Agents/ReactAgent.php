@@ -87,6 +87,18 @@ class ReactAgent implements AgentInterface
         return $this;
     }
 
+    /**
+     * Set unified progress update callback.
+     *
+     * @param callable $callback fn(\ClaudeAgents\Progress\AgentUpdate $update): void
+     */
+    public function onUpdate(callable $callback): self
+    {
+        $this->agent->onUpdate($callback);
+
+        return $this;
+    }
+
     public function run(string $task): AgentResult
     {
         return $this->agent->run($task);
