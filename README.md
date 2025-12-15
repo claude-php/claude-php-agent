@@ -1,8 +1,8 @@
 # Claude PHP Agent Framework
 
-[![Tests](https://github.com/claude-php/agent/actions/workflows/tests.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/tests.yml)
-[![Code Quality](https://github.com/claude-php/agent/actions/workflows/code-quality.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/code-quality.yml)
-[![Security](https://github.com/claude-php/agent/actions/workflows/security.yml/badge.svg)](https://github.com/claude-php/agent/actions/workflows/security.yml)
+[![Tests](https://github.com/claude-php/claude-php-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/claude-php/claude-php-agent/actions/workflows/tests.yml)
+[![Code Quality](https://github.com/claude-php/claude-php-agent/actions/workflows/code-quality.yml/badge.svg)](https://github.com/claude-php/claude-php-agent/actions/workflows/code-quality.yml)
+[![Security](https://github.com/claude-php/claude-php-agent/actions/workflows/security.yml/badge.svg)](https://github.com/claude-php/claude-php-agent/actions/workflows/security.yml)
 [![PHP Version](https://img.shields.io/badge/php-%5E8.1%7C%5E8.2%7C%5E8.3-blue)](https://www.php.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Latest Stable Version](https://img.shields.io/packagist/v/claude-php/agent.svg)](https://packagist.org/packages/claude-php/agent)
@@ -248,7 +248,7 @@ echo "Error Rate: " . $result->getMetadata()['error_rate'] . "\n";
 
 **Paper Results:** Successfully solved 20-disk Towers of Hanoi (1,048,575 moves) with ZERO errors!
 
-See [MAKER_IMPLEMENTATION.md](./MAKER_IMPLEMENTATION.md) for detailed documentation.
+See [MakerAgent Documentation](docs/MakerAgent.md) for detailed documentation.
 
 #### Adaptive Agent Service
 
@@ -407,7 +407,7 @@ $promises = $processor->runAsync();
 $results = Promise::all($promises);
 ```
 
-See [AMPHP_ASYNC.md](./AMPHP_ASYNC.md) for complete documentation.
+See the [examples directory](./examples) for complete async/concurrent examples.
 
 ### Output Parsers
 
@@ -447,30 +447,62 @@ See [Parsers Documentation](docs/Parsers.md) for complete guide.
 
 ## Examples
 
-See the [examples](./examples) directory for complete working examples:
+See the [examples](./examples) directory for 70+ complete working examples including:
 
-- `basic_agent.php` - Simple ReAct agent
-- `multi_tool_agent.php` - Agent with multiple tools
-- `hierarchical_agent.php` - Master-worker pattern
-- `reflection_agent.php` - Self-improving agent
-- `production_agent.php` - Production-ready setup
-- `adaptive_agent_service_example.php` - **NEW!** Intelligent agent selection & validation
-- `amphp_async_example.php` - **NEW!** Concurrent & parallel execution
-- `maker_example.php` - **NEW!** MAKER framework for reliable multi-step tasks
-- `maker_towers_hanoi.php` - **NEW!** Million-step benchmark from research paper
-- `parsers-demo.php` - **NEW!** Output parsers for structured data extraction
-- `chain-composition-demo.php` - Chain composition patterns
+- Basic ReAct agents and multi-tool usage
+- Hierarchical agent systems (master-worker pattern)
+- Reflection agents for self-improvement
+- Production-ready agent setups with error handling
+- Adaptive agent service with intelligent selection
+- Async/concurrent execution with AMPHP
+- MAKER framework for million-step reliable tasks
+- Output parsers for structured data extraction
+- Chain composition patterns
+- And many more!
+
+## Documentation
+
+For complete documentation, see:
+
+- **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
+- **[Documentation Index](docs/README.md)** - Complete guide to all features
+- **[Loop Strategies](docs/loop-strategies.md)** - Understanding agent loops
+- **[Agent Selection Guide](docs/agent-selection-guide.md)** - Choose the right pattern
+- **[Examples](examples/)** - 70+ working code examples
 
 ## Requirements
 
-- PHP 8.1+
-- claude-php/claude-php-sdk
+- PHP 8.1, 8.2, or 8.3
+- Composer
+- [claude-php/claude-php-sdk](https://github.com/claude-php/Claude-PHP-SDK)
+
+## Installation
+
+```bash
+composer require claude-php/agent
+```
+
+For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md).
+
+## Contributing
+
+We welcome contributions! Please see:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[SECURITY.md](SECURITY.md)** - Security policy
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/claude-php/claude-php-agent/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/claude-php/claude-php-agent/discussions)
+- **Documentation**: [docs/](docs/)
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Contributing
+## Acknowledgments
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Built with ❤️ using [Claude PHP SDK](https://github.com/claude-php/Claude-PHP-SDK) and inspired by the latest research in AI agents and LLM orchestration.
 
