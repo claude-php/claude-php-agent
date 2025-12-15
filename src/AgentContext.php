@@ -53,6 +53,11 @@ class AgentContext
     private array $tokenUsage = ['input' => 0, 'output' => 0];
 
     /**
+     * @var array<string, mixed> Arbitrary metadata collected during execution
+     */
+    private array $metadata = [];
+
+    /**
      * @var ContextManager|null Optional context manager
      */
     private ?ContextManager $contextManager = null;
@@ -352,6 +357,32 @@ class AgentContext
     }
 
     /**
+     * Add arbitrary metadata to the context (for loop strategies, evaluators, etc).
+     */
+    public function addMetadata(string $key, mixed $value): void
+    {
+        $this->metadata[$key] = $value;
+    }
+
+    /**
+     * Get metadata value or default.
+     */
+    public function getMetadata(string $key, mixed $default = null): mixed
+    {
+        return $this->metadata[$key] ?? $default;
+    }
+
+    /**
+     * Get all metadata.
+     *
+     * @return array<string, mixed>
+     */
+    public function getAllMetadata(): array
+    {
+        return $this->metadata;
+    }
+
+    /**
      * Get the context manager.
      */
     public function getContextManager(): ?ContextManager
@@ -484,6 +515,7 @@ class AgentContext
             'timestamp' => microtime(true),
             'token_usage' => $this->tokenUsage,
             'tool_calls' => $this->toolCalls,
+            'metadata' => $this->metadata,
         ];
 
         return $checkpointId;
@@ -503,6 +535,7 @@ class AgentContext
         $this->iteration = $checkpoint['iteration'];
         $this->tokenUsage = $checkpoint['token_usage'];
         $this->toolCalls = $checkpoint['tool_calls'];
+        $this->metadata = $checkpoint['metadata'] ?? [];
     }
 
     /**
@@ -550,6 +583,7 @@ class AgentContext
         $forked->iteration = $this->iteration;
         $forked->tokenUsage = $this->tokenUsage;
         $forked->toolCalls = $this->toolCalls;
+        $forked->metadata = $this->metadata;
         $forked->startTime = $this->startTime;
 
         return $forked;
@@ -571,6 +605,7 @@ class AgentContext
             'error' => $this->error,
             'tool_calls' => $this->toolCalls,
             'token_usage' => $this->tokenUsage,
+            'metadata' => $this->metadata,
             'start_time' => $this->startTime,
             'end_time' => $this->endTime,
             'execution_time' => $this->getExecutionTime(),
@@ -601,6 +636,11 @@ class AgentContext
             'start_time' => $this->startTime,
             'end_time' => $this->endTime,
         ];
+        if (! empty($this->metadata)) {
+            // Expose loop-specific metadata (e.g. reflection scores, plan steps)
+            // at the top level of AgentResult::getMetadata() for compatibility.
+            $metadata = array_merge($metadata, $this->metadata);
+        }
 
         if ($this->hasFailed()) {
             return AgentResult::failure(

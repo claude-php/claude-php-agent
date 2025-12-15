@@ -182,6 +182,26 @@ $database = Tool::create('query_users')
 
 ## Callbacks and Monitoring
 
+### Unified Progress Updates (Recommended)
+
+If you want continuous updates (iteration output, tool results, and start/end events) without wiring multiple callbacks, use `onUpdate()`:
+
+```php
+use ClaudeAgents\Progress\AgentUpdate;
+
+$agent->onUpdate(function (AgentUpdate $update): void {
+    if ($update->getType() === 'llm.iteration') {
+        $data = $update->getData();
+        echo "Iteration {$data['iteration']}: " . substr((string) ($data['text'] ?? ''), 0, 120) . "\n";
+    }
+
+    if ($update->getType() === 'tool.executed') {
+        $data = $update->getData();
+        echo "Tool {$data['tool']} executed (error=" . (($data['is_error'] ?? false) ? 'yes' : 'no') . ")\n";
+    }
+});
+```
+
 ### Iteration Callback
 
 Track each reasoning iteration:
@@ -189,7 +209,14 @@ Track each reasoning iteration:
 ```php
 $agent->onIteration(function ($iteration, $response, $context) {
     echo "Iteration {$iteration}\n";
-    echo "Current answer: {$context->getAnswer()}\n";
+    // Extract text blocks from the model response (ClaudePhp\Types\Message)
+    $text = '';
+    foreach (($response->content ?? []) as $block) {
+        if (($block['type'] ?? null) === 'text') {
+            $text .= $block['text'] ?? '';
+        }
+    }
+    echo "Latest model text: {$text}\n";
 });
 ```
 

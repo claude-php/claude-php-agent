@@ -15,7 +15,9 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use ClaudeAgents\Agents\ReactAgent;
+use ClaudeAgents\Progress\AgentUpdate;
 use ClaudeAgents\Tools\Tool;
+use ClaudeAgents\Tools\ToolResult;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\AbstractLogger;
 
@@ -167,12 +169,25 @@ $agent->onIteration(function ($iteration, $response, $context) use (&$iterationC
     echo str_repeat("─", 80) . "\n";
 });
 
-$agent->onToolExecution(function ($tool, $input, $result) {
+$agent->onToolExecution(function ($tool, $input, ToolResult $result) {
     echo "🔧 Tool Used: {$tool}\n";
     echo "   Input: " . json_encode($input) . "\n";
-    $resultStr = is_string($result) ? $result : json_encode($result);
+    $resultStr = $result->getContent();
     $displayResult = strlen($resultStr) > 100 ? substr($resultStr, 0, 100) . '...' : $resultStr;
     echo "   Result: {$displayResult}\n";
+});
+
+// Unified progress updates (single callback for iteration/tool/start/end events)
+$agent->onUpdate(function (AgentUpdate $update): void {
+    if ($update->getType() === 'agent.start') {
+        echo "\n🚀 Agent started\n";
+    }
+    if ($update->getType() === 'llm.iteration') {
+        $data = $update->getData();
+        $text = (string) ($data['text'] ?? '');
+        $preview = strlen($text) > 80 ? substr($text, 0, 80) . '...' : $text;
+        echo "🧠 LLM iteration {$data['iteration']}: {$preview}\n";
+    }
 });
 
 // Example 1: Simple calculation

@@ -13,7 +13,12 @@ use ClaudeAgents\Contracts\LoopStrategyInterface;
 use ClaudeAgents\Contracts\MemoryInterface;
 use ClaudeAgents\Contracts\ToolInterface;
 use ClaudeAgents\Loops\ReactLoop;
+use ClaudeAgents\Loops\PlanExecuteLoop;
+use ClaudeAgents\Loops\ReflectionLoop;
 use ClaudeAgents\Memory\Memory;
+use ClaudeAgents\Progress\AgentUpdate;
+use ClaudeAgents\Streaming\StreamEvent;
+use ClaudeAgents\Streaming\StreamingLoop;
 use ClaudeAgents\Support\RetryHandler;
 use ClaudeAgents\Tools\Tool;
 use ClaudeAgents\Tools\ToolRegistry;
@@ -63,6 +68,33 @@ class Agent implements AgentInterface
      * @var callable|null
      */
     private $onError = null;
+
+    /**
+     * Unified update callback.
+     *
+     * @var callable|null
+     */
+    private $onUpdate = null;
+
+    /**
+     * @var callable|null
+     */
+    private $onPlanCreated = null;
+
+    /**
+     * @var callable|null
+     */
+    private $onStepComplete = null;
+
+    /**
+     * @var callable|null
+     */
+    private $onReflection = null;
+
+    /**
+     * Avoid adding duplicate streaming handlers across runs/resumes.
+     */
+    private bool $streamUpdateHookAdded = false;
 
     public function __construct(
         ClaudePhp $client,
@@ -174,6 +206,7 @@ class Agent implements AgentInterface
     public function withLoopStrategy(LoopStrategyInterface $strategy): self
     {
         $this->loopStrategy = $strategy;
+        $this->streamUpdateHookAdded = false;
 
         return $this;
     }
@@ -271,6 +304,60 @@ class Agent implements AgentInterface
     public function onError(callable $callback): self
     {
         $this->onError = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Set unified progress update callback.
+     *
+     * This receives events like:
+     * - agent.start / agent.completed / agent.failed
+     * - llm.iteration (latest text, stop reason, usage)
+     * - tool.executed (tool name/input/result)
+     * - llm.stream (stream deltas when using StreamingLoop)
+     *
+     * @param callable $callback fn(AgentUpdate $update): void
+     */
+    public function onUpdate(callable $callback): self
+    {
+        $this->onUpdate = $callback;
+
+        return $this;
+    }
+
+    /**
+     * PlanExecuteLoop: plan created callback.
+     *
+     * @param callable $callback fn(array $steps, AgentContext $context): void
+     */
+    public function onPlanCreated(callable $callback): self
+    {
+        $this->onPlanCreated = $callback;
+
+        return $this;
+    }
+
+    /**
+     * PlanExecuteLoop: step complete callback.
+     *
+     * @param callable $callback fn(int $stepNumber, string $stepDescription, string $result): void
+     */
+    public function onStepComplete(callable $callback): self
+    {
+        $this->onStepComplete = $callback;
+
+        return $this;
+    }
+
+    /**
+     * ReflectionLoop: reflection callback.
+     *
+     * @param callable $callback fn(int $refinement, int $score, string $feedback): void
+     */
+    public function onReflection(callable $callback): self
+    {
+        $this->onReflection = $callback;
 
         return $this;
     }
@@ -456,6 +543,18 @@ class Agent implements AgentInterface
             'tools' => $this->tools->names(),
         ]);
 
+        $this->emitUpdate('agent.start', [
+            'task' => $task,
+            'tools' => $this->tools->names(),
+            'loop' => $this->loopStrategy->getName(),
+            'config' => [
+                'model' => $this->config->getModel(),
+                'max_iterations' => $this->config->getMaxIterations(),
+                'max_tokens' => $this->config->getMaxTokens(),
+                'temperature' => $this->config->getTemperature(),
+            ],
+        ]);
+
         // Create execution context
         $context = new AgentContext(
             client: $this->client,
@@ -487,6 +586,18 @@ class Agent implements AgentInterface
                 ($this->onError)($e, 1);
             }
 
+            $this->emitUpdate('agent.error', [
+                'message' => $e->getMessage(),
+                'iteration' => $context->getIteration(),
+            ]);
+
+            // Ensure callers always receive a terminal failure event.
+            $this->emitUpdate('agent.failed', [
+                'iterations' => $context->getIteration(),
+                'token_usage' => $context->getTokenUsage(),
+                'error' => $e->getMessage(),
+            ]);
+
             return AgentResult::failure(
                 error: $e->getMessage(),
                 messages: $context->getMessages(),
@@ -501,6 +612,20 @@ class Agent implements AgentInterface
             'iterations' => $result->getIterations(),
             'tokens' => $result->getTokenUsage(),
         ]);
+
+        if ($result->isSuccess()) {
+            $this->emitUpdate('agent.completed', [
+                'iterations' => $result->getIterations(),
+                'token_usage' => $result->getTokenUsage(),
+                'answer' => $result->getAnswer(),
+            ]);
+        } else {
+            $this->emitUpdate('agent.failed', [
+                'iterations' => $result->getIterations(),
+                'token_usage' => $result->getTokenUsage(),
+                'error' => $result->getError(),
+            ]);
+        }
 
         return $result;
     }
@@ -543,12 +668,146 @@ class Agent implements AgentInterface
     private function configureLoopCallbacks(): void
     {
         if ($this->loopStrategy instanceof CallbackSupportingLoopInterface) {
-            if ($this->onIteration !== null) {
-                $this->loopStrategy->onIteration($this->onIteration);
+            $this->loopStrategy->onIteration(function (int $iteration, mixed $response, AgentContext $context): void {
+                if ($this->onIteration !== null) {
+                    ($this->onIteration)($iteration, $response, $context);
+                }
+
+                $content = null;
+                $stopReason = null;
+                $usage = null;
+
+                if (is_object($response)) {
+                    $content = $response->content ?? null;
+                    $stopReason = $response->stop_reason ?? null;
+                    $usage = $response->usage ?? null;
+                }
+
+                $this->emitUpdate('llm.iteration', [
+                    'iteration' => $iteration,
+                    'stop_reason' => $stopReason,
+                    'text' => $this->extractTextContent($content),
+                    'usage' => $usage,
+                    'token_usage_total' => $context->getTokenUsage(),
+                ]);
+            });
+
+            $this->loopStrategy->onToolExecution(function (string $tool, array $input, $result): void {
+                if ($this->onToolExecution !== null) {
+                    ($this->onToolExecution)($tool, $input, $result);
+                }
+
+                $payload = [
+                    'tool' => $tool,
+                    'input' => $input,
+                ];
+
+                if (is_object($result) && method_exists($result, 'getContent') && method_exists($result, 'isError')) {
+                    $payload['result'] = $result->getContent();
+                    $payload['is_error'] = $result->isError();
+                }
+
+                $this->emitUpdate('tool.executed', $payload);
+            });
+        }
+
+        // Loop-specific hooks for richer progress.
+        if ($this->loopStrategy instanceof PlanExecuteLoop) {
+            $this->loopStrategy->onPlanCreated(function (array $steps, AgentContext $context): void {
+                if ($this->onPlanCreated !== null) {
+                    ($this->onPlanCreated)($steps, $context);
+                }
+
+                $this->emitUpdate('plan.created', [
+                    'step_count' => count($steps),
+                    'steps' => $steps,
+                    'iteration' => $context->getIteration(),
+                ]);
+            });
+
+            $this->loopStrategy->onStepComplete(function (int $stepNumber, string $stepDescription, string $result): void {
+                if ($this->onStepComplete !== null) {
+                    ($this->onStepComplete)($stepNumber, $stepDescription, $result);
+                }
+
+                $this->emitUpdate('plan.step_completed', [
+                    'step' => $stepNumber,
+                    'description' => $stepDescription,
+                    'result' => $result,
+                ]);
+            });
+        }
+
+        if ($this->loopStrategy instanceof ReflectionLoop) {
+            $this->loopStrategy->onReflection(function (int $refinement, int $score, string $feedback): void {
+                if ($this->onReflection !== null) {
+                    ($this->onReflection)($refinement, $score, $feedback);
+                }
+
+                $this->emitUpdate('reflection.scored', [
+                    'refinement' => $refinement,
+                    'score' => $score,
+                    'feedback' => $feedback,
+                ]);
+            });
+        }
+
+        if ($this->loopStrategy instanceof StreamingLoop && $this->onUpdate !== null && ! $this->streamUpdateHookAdded) {
+            $this->loopStrategy->onStream(function (StreamEvent $event): void {
+                $this->emitUpdate('llm.stream', [
+                    'event' => $event->toArray(),
+                ]);
+            });
+
+            $this->streamUpdateHookAdded = true;
+        }
+    }
+
+    /**
+     * Safely emit a progress update without allowing consumer exceptions
+     * to break the agent loop.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function emitUpdate(string $type, array $data = []): void
+    {
+        if ($this->onUpdate === null) {
+            return;
+        }
+
+        try {
+            ($this->onUpdate)(new AgentUpdate(
+                type: $type,
+                agent: $this->name,
+                data: $data,
+                timestamp: microtime(true),
+            ));
+        } catch (\Throwable $e) {
+            // Never allow progress listeners to crash the run.
+            $this->logger->warning('Progress update callback threw an exception: ' . $e->getMessage(), [
+                'event_type' => $type,
+            ]);
+        }
+    }
+
+    private function extractTextContent(mixed $content): string
+    {
+        if (! is_array($content)) {
+            return '';
+        }
+
+        $texts = [];
+        foreach ($content as $block) {
+            if (! is_array($block)) {
+                continue;
             }
-            if ($this->onToolExecution !== null) {
-                $this->loopStrategy->onToolExecution($this->onToolExecution);
+
+            $type = $block['type'] ?? null;
+            if ($type === 'text' && isset($block['text'])) {
+                $texts[] = $block['text'];
             }
         }
+
+        return implode("\n", $texts);
     }
 }

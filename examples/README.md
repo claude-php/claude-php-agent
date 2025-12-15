@@ -4,6 +4,8 @@
 
 This directory contains 16 comprehensive examples demonstrating various features and patterns of the Claude PHP Agent framework. Each example is production-ready and demonstrates best practices.
 
+Most examples also show **live progress reporting** via callbacks, including the unified `Agent::onUpdate()` progress stream for iteration updates, tool execution results, and streaming deltas.
+
 ---
 
 ## Quick Start Examples

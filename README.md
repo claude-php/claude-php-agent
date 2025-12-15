@@ -36,6 +36,9 @@ composer require claude-php/agent
 
 use ClaudeAgents\Agent;
 use ClaudeAgents\Tools\Tool;
+use ClaudePhp\ClaudePhp;
+
+$client = new ClaudePhp(apiKey: getenv('ANTHROPIC_API_KEY'));
 
 // Create a simple calculator tool
 $calculator = Tool::create('calculate')
@@ -47,7 +50,7 @@ $calculator = Tool::create('calculate')
     });
 
 // Create an agent with the tool
-$agent = Agent::create()
+$agent = Agent::create($client)
     ->withTool($calculator)
     ->withSystemPrompt('You are a helpful assistant that can perform calculations.');
 
@@ -55,6 +58,20 @@ $agent = Agent::create()
 $result = $agent->run('What is 25 * 17 + 100?');
 
 echo $result->getAnswer();
+```
+
+### Progress Updates (Streaming UI / Live Status)
+
+While an agent is running, you can receive continuous progress events (iteration output, tool results, and streaming deltas when using `StreamingLoop`) via `onUpdate()`:
+
+```php
+use ClaudeAgents\Progress\AgentUpdate;
+
+$agent = Agent::create($client)
+    ->onUpdate(function (AgentUpdate $update): void {
+        // Send to WebSocket/SSE, update CLI spinner, etc.
+        // $update->getType() and $update->getData() are structured and stable.
+    });
 ```
 
 ## Core Concepts
@@ -198,18 +215,20 @@ $agent = Agent::create()
 
 ```php
 use ClaudeAgents\Agent;
+use ClaudeAgents\Tools\ToolResult;
 use Psr\Log\LoggerInterface;
 
-$agent = Agent::create()
+$agent = Agent::create($client)
     ->withLogger($psrLogger)
-    ->maxRetries(3)
-    ->retryDelay(1000) // ms
-    ->timeout(30.0)
+    ->withRetry(maxAttempts: 3, delayMs: 1000) // ms
     ->onError(function (Throwable $e, int $attempt) {
         // Handle errors
     })
-    ->onToolExecution(function (string $tool, array $input, string $result) {
+    ->onToolExecution(function (string $tool, array $input, ToolResult $result) {
         // Monitor tool usage
+    })
+    ->onUpdate(function (\ClaudeAgents\Progress\AgentUpdate $update) {
+        // Unified progress updates (iterations, tools, streaming deltas, start/end)
     });
 ```
 

@@ -56,6 +56,7 @@ The observability system provides production-ready monitoring and debugging capa
 
 ```php
 use ClaudeAgents\Agent;
+use ClaudeAgents\Progress\AgentUpdate;
 use ClaudeAgents\Observability\Tracer;
 use ClaudeAgents\Observability\Metrics;
 use ClaudeAgents\Observability\CostEstimator;
@@ -100,6 +101,40 @@ $cost = $estimator->estimateCost(
 
 echo "Total Duration: {$traceData['total_duration']}ms\n";
 echo "Total Cost: " . CostEstimator::formatCost($cost) . "\n";
+```
+
+### Unified Progress Stream (Recommended)
+
+If you want a single hook for observability (start/end, iterations, tool executions, streaming deltas), use `Agent::onUpdate()`:
+
+```php
+$agent = Agent::create($client)
+    ->onUpdate(function (AgentUpdate $update) use ($tracer, $metrics): void {
+        $type = $update->getType();
+        $data = $update->getData();
+
+        // Example: record a high-level success/failure metric at the end
+        if ($type === 'agent.completed') {
+            $usage = $data['token_usage'] ?? ['input' => 0, 'output' => 0];
+            $metrics->recordRequest(
+                success: true,
+                tokensInput: (int) ($usage['input'] ?? 0),
+                tokensOutput: (int) ($usage['output'] ?? 0),
+                duration: 0
+            );
+        }
+
+        if ($type === 'agent.failed') {
+            $usage = $data['token_usage'] ?? ['input' => 0, 'output' => 0];
+            $metrics->recordRequest(
+                success: false,
+                tokensInput: (int) ($usage['input'] ?? 0),
+                tokensOutput: (int) ($usage['output'] ?? 0),
+                duration: 0,
+                error: (string) ($data['error'] ?? 'unknown_error')
+            );
+        }
+    });
 ```
 
 ### Automatic Observability
