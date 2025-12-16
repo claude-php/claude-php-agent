@@ -6,6 +6,9 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\ML\KNNMatcher;
+use ClaudeAgents\ML\TaskEmbedder;
+use ClaudeAgents\ML\TaskHistoryStore;
 use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
@@ -43,6 +46,10 @@ class AdaptiveAgentService implements AgentInterface
     private float $qualityThreshold;
     private bool $enableReframing;
     private LoggerInterface $logger;
+    private bool $enableKNN;
+    private ?TaskHistoryStore $historyStore;
+    private ?TaskEmbedder $taskEmbedder;
+    private ?KNNMatcher $knnMatcher;
 
     /**
      * Create a new Adaptive Agent Service.
@@ -53,6 +60,10 @@ class AdaptiveAgentService implements AgentInterface
      *   - max_attempts: Maximum number of attempts to get a good result (default: 3)
      *   - quality_threshold: Minimum quality score (0-10) to accept result (default: 7.0)
      *   - enable_reframing: Whether to reframe requests on failure (default: true)
+     *   - enable_knn: Enable k-NN based learning and selection (default: true)
+     *   - history_store_path: Path to history store file (default: 'storage/agent_history.json')
+     *   - knn_k: Number of neighbors to consider for k-NN (default: 5)
+     *   - adaptive_threshold: Use adaptive quality threshold based on history (default: true)
      *   - logger: PSR-3 logger instance
      */
     public function __construct(ClaudePhp $client, array $options = [])
@@ -63,6 +74,24 @@ class AdaptiveAgentService implements AgentInterface
         $this->qualityThreshold = $options['quality_threshold'] ?? 7.0;
         $this->enableReframing = $options['enable_reframing'] ?? true;
         $this->logger = $options['logger'] ?? new NullLogger();
+
+        // k-NN Learning System
+        $this->enableKNN = $options['enable_knn'] ?? true;
+
+        if ($this->enableKNN) {
+            $storePath = $options['history_store_path'] ?? 'storage/agent_history.json';
+            $this->historyStore = new TaskHistoryStore($storePath);
+            $this->taskEmbedder = new TaskEmbedder();
+            $this->knnMatcher = new KNNMatcher();
+
+            $this->logger->info('k-NN learning enabled', [
+                'history_records' => count($this->historyStore->getAll()),
+            ]);
+        } else {
+            $this->historyStore = null;
+            $this->taskEmbedder = null;
+            $this->knnMatcher = null;
+        }
     }
 
     /**
@@ -115,10 +144,31 @@ class AdaptiveAgentService implements AgentInterface
         $this->logger->info("Adaptive Agent Service: {$task}");
         $startTime = microtime(true);
         $attempts = [];
+        $taskId = uniqid('task_', true);
 
         // Analyze the task to understand requirements
         $taskAnalysis = $this->analyzeTask($task);
         $this->logger->debug('Task analysis', $taskAnalysis);
+
+        // Generate task vector for k-NN (if enabled)
+        $taskVector = null;
+        if ($this->enableKNN && $this->taskEmbedder) {
+            $taskVector = $this->taskEmbedder->embed($taskAnalysis);
+        }
+
+        // Use adaptive quality threshold if enabled and we have history
+        $originalThreshold = $this->qualityThreshold;
+        if ($this->enableKNN && $this->historyStore && $taskVector) {
+            $adaptiveThreshold = $this->historyStore->getAdaptiveThreshold($taskVector, 10, $originalThreshold);
+
+            if (abs($adaptiveThreshold - $originalThreshold) > 0.5) {
+                $this->logger->info("Adaptive threshold adjustment", [
+                    'original' => $originalThreshold,
+                    'adaptive' => $adaptiveThreshold,
+                ]);
+                $this->qualityThreshold = $adaptiveThreshold;
+            }
+        }
 
         // Try up to maxAttempts to get a good result
         for ($attempt = 1; $attempt <= $this->maxAttempts; $attempt++) {
@@ -168,6 +218,23 @@ class AdaptiveAgentService implements AgentInterface
                 $this->logger->info('Success! Quality threshold met.');
                 $totalDuration = microtime(true) - $startTime;
 
+                // Record success in history store
+                if ($this->enableKNN && $this->historyStore && $taskVector) {
+                    $this->recordTaskExecution(
+                        $taskId,
+                        $task,
+                        $taskVector,
+                        $taskAnalysis,
+                        $selectedAgentId,
+                        true,
+                        $validation['quality_score'],
+                        $totalDuration
+                    );
+                }
+
+                // Restore original threshold
+                $this->qualityThreshold = $originalThreshold;
+
                 return AgentResult::success(
                     answer: $result->getAnswer(),
                     messages: $result->getMessages(),
@@ -179,6 +246,8 @@ class AdaptiveAgentService implements AgentInterface
                         'final_agent' => $selectedAgentId,
                         'final_quality' => $validation['quality_score'],
                         'total_duration' => round($totalDuration, 3),
+                        'knn_enabled' => $this->enableKNN,
+                        'adaptive_threshold_used' => $this->enableKNN,
                     ])
                 );
             }
@@ -204,6 +273,23 @@ class AdaptiveAgentService implements AgentInterface
         // Return the best result we got
         $bestAttempt = $this->getBestAttempt($attempts);
 
+        // Record failure in history (best attempt)
+        if ($this->enableKNN && $this->historyStore && $taskVector && $bestAttempt) {
+            $this->recordTaskExecution(
+                $taskId,
+                $task,
+                $taskVector,
+                $taskAnalysis,
+                $bestAttempt['agent_id'],
+                false,
+                $bestAttempt['validation']['quality_score'],
+                $totalDuration
+            );
+        }
+
+        // Restore original threshold
+        $this->qualityThreshold = $originalThreshold;
+
         return AgentResult::failure(
             error: "Could not achieve quality threshold after {$this->maxAttempts} attempts. Best score: {$bestAttempt['validation']['quality_score']}/10",
             metadata: [
@@ -212,6 +298,7 @@ class AdaptiveAgentService implements AgentInterface
                 'attempts' => $attempts,
                 'best_attempt' => $bestAttempt,
                 'total_duration' => round($totalDuration, 3),
+                'knn_enabled' => $this->enableKNN,
             ]
         );
     }
@@ -289,6 +376,77 @@ class AdaptiveAgentService implements AgentInterface
      */
     private function selectBestAgent(array $taskAnalysis, array $previousAttempts): ?string
     {
+        // Use k-NN based selection if enabled and we have history
+        if ($this->enableKNN && $this->historyStore && $this->taskEmbedder) {
+            $knnResult = $this->selectAgentUsingKNN($taskAnalysis, $previousAttempts);
+
+            if ($knnResult !== null) {
+                $this->logger->debug('Using k-NN based agent selection', [
+                    'selected' => $knnResult,
+                    'method' => 'k-NN',
+                ]);
+                return $knnResult;
+            }
+
+            $this->logger->debug('k-NN selection returned null, falling back to rule-based');
+        }
+
+        // Fallback to rule-based selection
+        return $this->selectAgentUsingRules($taskAnalysis, $previousAttempts);
+    }
+
+    /**
+     * Select agent using k-NN based on historical performance.
+     *
+     * @param array $taskAnalysis Task analysis data
+     * @param array $previousAttempts Previous attempts
+     * @return string|null Agent ID or null
+     */
+    private function selectAgentUsingKNN(array $taskAnalysis, array $previousAttempts): ?string
+    {
+        // Generate task vector
+        $taskVector = $this->taskEmbedder->embed($taskAnalysis);
+
+        // Get best agents from similar historical tasks
+        $bestAgents = $this->historyStore->getBestAgentsForSimilar($taskVector, 10, 5);
+
+        if (empty($bestAgents)) {
+            return null;
+        }
+
+        $this->logger->debug('k-NN found best agents', $bestAgents);
+
+        // Filter out already tried agents
+        $triedAgents = array_column($previousAttempts, 'agent_id');
+        $availableAgents = array_filter(
+            $bestAgents,
+            fn($agent) => !in_array($agent['agent_id'], $triedAgents) || count($triedAgents) >= count($this->agents)
+        );
+
+        if (empty($availableAgents)) {
+            // All top agents tried, pick the best even if tried
+            $availableAgents = $bestAgents;
+        }
+
+        // Get the top agent that we have registered
+        foreach ($availableAgents as $agentData) {
+            if (isset($this->agents[$agentData['agent_id']])) {
+                return $agentData['agent_id'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Select agent using rule-based scoring (original method).
+     *
+     * @param array $taskAnalysis Task analysis data
+     * @param array $previousAttempts Previous attempts
+     * @return string|null Agent ID or null
+     */
+    private function selectAgentUsingRules(array $taskAnalysis, array $previousAttempts): ?string
+    {
         $scores = [];
         $triedAgents = array_column($previousAttempts, 'agent_id');
 
@@ -363,7 +521,7 @@ class AdaptiveAgentService implements AgentInterface
         arsort($scores);
         $selected = array_key_first($scores);
 
-        $this->logger->debug('Agent scores', $scores);
+        $this->logger->debug('Agent scores (rule-based)', $scores);
 
         return $selected;
     }
@@ -488,7 +646,7 @@ class AdaptiveAgentService implements AgentInterface
     private function reframeTask(string $originalTask, array $issues): string
     {
         try {
-            $issuesText = implode("\n", array_map(fn ($i) => "- $i", $issues));
+            $issuesText = implode("\n", array_map(fn($i) => "- $i", $issues));
 
             $prompt = <<<PROMPT
                 The following task was attempted but had quality issues. Reframe it to be clearer and more specific.
@@ -567,11 +725,59 @@ class AdaptiveAgentService implements AgentInterface
     }
 
     /**
-     * Extract text content from Claude response.
+     * Record task execution in history store for learning.
      *
-     * @param array $content Response content blocks
-     * @return string Extracted text
+     * @param string $taskId Unique task ID
+     * @param string $task Original task
+     * @param array<float> $taskVector Task feature vector
+     * @param array $taskAnalysis Task analysis
+     * @param string $agentId Selected agent
+     * @param bool $success Whether execution succeeded
+     * @param float $qualityScore Quality score
+     * @param float $duration Duration in seconds
      */
+    private function recordTaskExecution(
+        string $taskId,
+        string $task,
+        array $taskVector,
+        array $taskAnalysis,
+        string $agentId,
+        bool $success,
+        float $qualityScore,
+        float $duration
+    ): void {
+        if (!$this->historyStore) {
+            return;
+        }
+
+        try {
+            $this->historyStore->record([
+                'id' => $taskId,
+                'task' => $task,
+                'task_vector' => $taskVector,
+                'task_analysis' => $taskAnalysis,
+                'agent_id' => $agentId,
+                'agent_type' => $this->agentProfiles[$agentId]['type'] ?? 'unknown',
+                'success' => $success,
+                'quality_score' => $qualityScore,
+                'duration' => round($duration, 3),
+                'timestamp' => time(),
+                'metadata' => [
+                    'complexity' => $taskAnalysis['complexity'] ?? 'unknown',
+                    'domain' => $taskAnalysis['domain'] ?? 'unknown',
+                ],
+            ]);
+
+            $this->logger->debug("Recorded task execution in history", [
+                'task_id' => $taskId,
+                'agent_id' => $agentId,
+                'success' => $success,
+                'quality_score' => $qualityScore,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning("Failed to record task execution: {$e->getMessage()}");
+        }
+    }
 
     /**
      * Get the agent name.
@@ -612,5 +818,88 @@ class AdaptiveAgentService implements AgentInterface
     public function getAgentProfile(string $agentId): ?array
     {
         return $this->agentProfiles[$agentId] ?? null;
+    }
+
+    /**
+     * Get task history store.
+     *
+     * @return TaskHistoryStore|null History store or null if k-NN disabled
+     */
+    public function getHistoryStore(): ?TaskHistoryStore
+    {
+        return $this->historyStore;
+    }
+
+    /**
+     * Get history statistics.
+     *
+     * @return array History statistics
+     */
+    public function getHistoryStats(): array
+    {
+        if (!$this->historyStore) {
+            return ['knn_enabled' => false];
+        }
+
+        return array_merge(
+            ['knn_enabled' => true],
+            $this->historyStore->getStats()
+        );
+    }
+
+    /**
+     * Get recommended agent for a task without executing it.
+     *
+     * @param string $task Task description
+     * @return array Recommendation with agent_id, confidence, and reasoning
+     */
+    public function recommendAgent(string $task): array
+    {
+        $taskAnalysis = $this->analyzeTask($task);
+
+        if ($this->enableKNN && $this->taskEmbedder && $this->historyStore) {
+            $taskVector = $this->taskEmbedder->embed($taskAnalysis);
+            $bestAgents = $this->historyStore->getBestAgentsForSimilar($taskVector, 10, 3);
+
+            if (!empty($bestAgents)) {
+                $topAgent = $bestAgents[0];
+
+                return [
+                    'agent_id' => $topAgent['agent_id'],
+                    'confidence' => $topAgent['score'],
+                    'method' => 'k-NN',
+                    'reasoning' => sprintf(
+                        'Based on %d similar historical tasks with %.1f%% success rate and %.1f average quality',
+                        $topAgent['attempts'],
+                        $topAgent['success_rate'] * 100,
+                        $topAgent['avg_quality']
+                    ),
+                    'alternatives' => array_slice($bestAgents, 1, 2),
+                    'task_analysis' => $taskAnalysis,
+                ];
+            }
+        }
+
+        // Fallback to rule-based
+        $selectedAgent = $this->selectAgentUsingRules($taskAnalysis, []);
+
+        return [
+            'agent_id' => $selectedAgent,
+            'confidence' => 0.5,
+            'method' => 'rule-based',
+            'reasoning' => 'Selected based on rule-based scoring (no historical data)',
+            'alternatives' => [],
+            'task_analysis' => $taskAnalysis,
+        ];
+    }
+
+    /**
+     * Check if k-NN learning is enabled.
+     *
+     * @return bool True if enabled
+     */
+    public function isKNNEnabled(): bool
+    {
+        return $this->enableKNN;
     }
 }
