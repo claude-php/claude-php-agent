@@ -1,0 +1,178 @@
+[
+    {
+        "id": "task_69415c23a76a13.93009408",
+        "task": "Calculate 15% of 240",
+        "task_vector": [
+            0.25,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0.33,
+            0.04,
+            0.2
+        ],
+        "task_analysis": {
+            "complexity": "simple",
+            "domain": "analytical",
+            "requires_tools": false,
+            "requires_quality": "standard",
+            "requires_knowledge": false,
+            "requires_reasoning": true,
+            "requires_iteration": false,
+            "estimated_steps": 2,
+            "key_requirements": [
+                "basic arithmetic",
+                "percentage calculation"
+            ]
+        },
+        "agent_id": "react_agent",
+        "agent_type": "react",
+        "success": true,
+        "quality_score": 10,
+        "duration": 12.397,
+        "timestamp": 1765891120,
+        "metadata": {
+            "complexity": "simple",
+            "domain": "analytical"
+        }
+    },
+    {
+        "id": "task_69415c30145b36.14860250",
+        "task": "Calculate 20% of 500",
+        "task_vector": [
+            0.25,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0.33,
+            0.04,
+            0.2
+        ],
+        "task_analysis": {
+            "complexity": "simple",
+            "domain": "analytical",
+            "requires_tools": false,
+            "requires_quality": "standard",
+            "requires_knowledge": false,
+            "requires_reasoning": true,
+            "requires_iteration": false,
+            "estimated_steps": 2,
+            "key_requirements": [
+                "basic arithmetic",
+                "percentage calculation"
+            ]
+        },
+        "agent_id": "react_agent",
+        "agent_type": "react",
+        "success": true,
+        "quality_score": 10,
+        "duration": 12.108,
+        "timestamp": 1765891132,
+        "metadata": {
+            "complexity": "simple",
+            "domain": "analytical"
+        }
+    },
+    {
+        "id": "task_69415c9a9d0d26.49954700",
+        "task": "Calculate 15% of 240",
+        "task_vector": [
+            0.25,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0.33,
+            0.04,
+            0.2
+        ],
+        "task_analysis": {
+            "complexity": "simple",
+            "domain": "analytical",
+            "requires_tools": false,
+            "requires_quality": "standard",
+            "requires_knowledge": false,
+            "requires_reasoning": true,
+            "requires_iteration": false,
+            "estimated_steps": 2,
+            "key_requirements": [
+                "basic arithmetic",
+                "percentage calculation"
+            ]
+        },
+        "agent_id": "react_agent",
+        "agent_type": "react",
+        "success": true,
+        "quality_score": 10,
+        "duration": 15.413,
+        "timestamp": 1765891242,
+        "metadata": {
+            "complexity": "simple",
+            "domain": "analytical"
+        }
+    },
+    {
+        "id": "task_69415caa0df659.96573279",
+        "task": "Calculate 20% of 500",
+        "task_vector": [
+            0.25,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0.33,
+            0.04,
+            0.2
+        ],
+        "task_analysis": {
+            "complexity": "simple",
+            "domain": "analytical",
+            "requires_tools": false,
+            "requires_quality": "standard",
+            "requires_knowledge": false,
+            "requires_reasoning": true,
+            "requires_iteration": false,
+            "estimated_steps": 2,
+            "key_requirements": [
+                "basic arithmetic",
+                "percentage calculation"
+            ]
+        },
+        "agent_id": "react_agent",
+        "agent_type": "react",
+        "success": true,
+        "quality_score": 10,
+        "duration": 14.247,
+        "timestamp": 1765891256,
+        "metadata": {
+            "complexity": "simple",
+            "domain": "analytical"
+        }
+    }
+]
