@@ -377,7 +377,7 @@ class CoordinatorAgent implements AgentInterface
         foreach ($this->agents as $agentId => $info) {
             // Base score from capability matching
             $capabilityMatch = count(array_intersect($requirements, $info['capabilities']));
-            
+
             if ($capabilityMatch === 0) {
                 continue; // Can't handle this task
             }
