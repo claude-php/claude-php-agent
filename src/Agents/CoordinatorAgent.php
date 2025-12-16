@@ -6,13 +6,15 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\ML\Traits\LearnableAgent;
+use ClaudeAgents\ML\Traits\StrategySelector;
 use ClaudeAgents\Support\TextContentExtractor;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Coordinator Agent - Enhanced multi-agent coordination with load balancing.
+ * Coordinator Agent - Enhanced multi-agent coordination with ML-powered selection.
  *
  * Manages agent capabilities, resource allocation, conflict resolution,
  * and performance monitoring for complex multi-agent systems.
@@ -22,9 +24,16 @@ use Psr\Log\NullLogger;
  * - Load balancing across registered agents
  * - Task requirement analysis
  * - Performance tracking and workload monitoring
+ * - **ML-Enhanced:** Learns optimal worker selection from historical performance
+ * - **ML-Enhanced:** Learns decomposition strategies using StrategySelector
+ *
+ * @package ClaudeAgents\Agents
  */
 class CoordinatorAgent implements AgentInterface
 {
+    use LearnableAgent;
+    use StrategySelector;
+
     private ClaudePhp $client;
     private string $name;
     private string $model;
@@ -33,6 +42,7 @@ class CoordinatorAgent implements AgentInterface
     private array $workload = [];
     private array $performance = [];
     private LoggerInterface $logger;
+    private bool $useMLSelection = false;
 
     /**
      * @param ClaudePhp $client The Claude API client
@@ -41,6 +51,8 @@ class CoordinatorAgent implements AgentInterface
      *   - model: Model to use for task analysis
      *   - max_tokens: Max tokens for task analysis
      *   - logger: PSR-3 logger
+     *   - enable_ml_selection: Enable ML-based worker selection (default: false)
+     *   - ml_history_path: Path for ML history storage
      */
     public function __construct(ClaudePhp $client, array $options = [])
     {
@@ -49,6 +61,20 @@ class CoordinatorAgent implements AgentInterface
         $this->model = $options['model'] ?? 'claude-sonnet-4-5';
         $this->maxTokens = $options['max_tokens'] ?? 256;
         $this->logger = $options['logger'] ?? new NullLogger();
+        $this->useMLSelection = $options['enable_ml_selection'] ?? false;
+
+        // Enable ML features if requested
+        if ($this->useMLSelection) {
+            $historyPath = $options['ml_history_path'] ?? 'storage/coordinator_history.json';
+            $this->enableLearning($historyPath);
+
+            // Enable strategy learning for decomposition strategies
+            $this->enableStrategyLearning(
+                strategies: ['direct_delegation', 'parallel_decomposition', 'sequential_decomposition'],
+                defaultStrategy: 'direct_delegation',
+                historyPath: str_replace('.json', '_strategy.json', $historyPath)
+            );
+        }
     }
 
     public function run(string $task): AgentResult
@@ -60,8 +86,10 @@ class CoordinatorAgent implements AgentInterface
             // Analyze task requirements
             $requirements = $this->analyzeRequirements($task);
 
-            // Match to capable agents
-            $selectedAgent = $this->selectAgent($requirements);
+            // Select agent (ML-enhanced if enabled)
+            $selectedAgent = $this->useMLSelection
+                ? $this->selectAgentML($task, $requirements)
+                : $this->selectAgent($requirements);
 
             if (! $selectedAgent) {
                 return AgentResult::failure(
@@ -84,6 +112,20 @@ class CoordinatorAgent implements AgentInterface
             // Update workload tracking
             $this->updateWorkload($selectedAgent);
 
+            // Record for ML learning (if enabled)
+            if ($this->useMLSelection && $this->isLearningEnabled()) {
+                $agentResult = AgentResult::success(
+                    answer: $result,
+                    messages: [],
+                    iterations: 1
+                );
+                $this->recordExecution($task, $agentResult, [
+                    'duration' => $duration,
+                    'selected_agent' => $selectedAgent,
+                    'requirements' => $requirements,
+                ]);
+            }
+
             return AgentResult::success(
                 answer: $result,
                 messages: [],
@@ -94,6 +136,7 @@ class CoordinatorAgent implements AgentInterface
                     'workload' => $this->workload,
                     'duration' => round($duration, 3),
                     'agent_performance' => $this->performance[$selectedAgent] ?? [],
+                    'ml_enabled' => $this->useMLSelection,
                 ],
             );
         } catch (\Throwable $e) {
@@ -307,6 +350,132 @@ class CoordinatorAgent implements AgentInterface
     }
 
     public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * ML-enhanced agent selection based on historical performance.
+     *
+     * @param string $task The task to delegate
+     * @param array<string> $requirements Task requirements
+     * @return string|null Selected agent ID
+     */
+    private function selectAgentML(string $task, array $requirements): ?string
+    {
+        // Get historical performance for similar tasks
+        $similar = $this->getHistoricalPerformance($task, k: 10);
+
+        if (empty($similar)) {
+            // No history yet, fall back to rule-based selection
+            return $this->selectAgent($requirements);
+        }
+
+        // Score agents based on historical success with similar tasks
+        $agentScores = [];
+
+        foreach ($this->agents as $agentId => $info) {
+            // Base score from capability matching
+            $capabilityMatch = count(array_intersect($requirements, $info['capabilities']));
+            
+            if ($capabilityMatch === 0) {
+                continue; // Can't handle this task
+            }
+
+            $baseScore = $capabilityMatch * 10;
+
+            // Enhance with historical performance
+            $historicalSuccess = 0;
+            $historicalCount = 0;
+
+            foreach ($similar as $record) {
+                if (($record['metadata']['selected_agent'] ?? null) === $agentId) {
+                    $historicalCount++;
+                    if ($record['metadata']['success'] ?? $record['success'] ?? false) {
+                        $historicalSuccess++;
+                    }
+                }
+            }
+
+            if ($historicalCount > 0) {
+                $successRate = $historicalSuccess / $historicalCount;
+                $historicalBonus = $successRate * 20;
+            } else {
+                $historicalBonus = 10; // Neutral for untried agents
+            }
+
+            // Load balancing factor
+            $loadPenalty = $this->workload[$agentId] * 2;
+
+            $totalScore = $baseScore + $historicalBonus - $loadPenalty;
+            $agentScores[$agentId] = $totalScore;
+
+            $this->logger->debug("Agent {$agentId} score: {$totalScore} " .
+                "(capability: {$capabilityMatch}, historical: {$historicalBonus}, load: -{$loadPenalty})");
+        }
+
+        if (empty($agentScores)) {
+            return null;
+        }
+
+        // Select highest scoring agent
+        arsort($agentScores);
+        return array_key_first($agentScores);
+    }
+
+    /**
+     * Override to customize task analysis for learning.
+     *
+     * @param string $task Task to analyze
+     * @return array Task analysis
+     */
+    protected function analyzeTaskForLearning(string $task): array
+    {
+        $requirements = $this->analyzeRequirements($task);
+
+        return [
+            'complexity' => count($requirements) > 3 ? 'complex' : (count($requirements) > 1 ? 'medium' : 'simple'),
+            'domain' => 'coordination',
+            'requires_tools' => false,
+            'requires_knowledge' => true,
+            'requires_reasoning' => true,
+            'requires_iteration' => false,
+            'requires_quality' => 'standard',
+            'estimated_steps' => 3,
+            'key_requirements' => $requirements,
+        ];
+    }
+
+    /**
+     * Override to evaluate coordination quality.
+     *
+     * @param AgentResult $result Result to evaluate
+     * @return float Quality score (0-10)
+     */
+    protected function evaluateResultQuality(AgentResult $result): float
+    {
+        if (!$result->isSuccess()) {
+            return 0.0;
+        }
+
+        // Base score on success and answer quality
+        $answerLength = strlen($result->getAnswer());
+
+        if ($answerLength < 20) {
+            return 5.0; // Very short answer
+        } elseif ($answerLength < 100) {
+            return 7.0;
+        } else {
+            return 8.5; // Good detailed answer
+        }
+    }
+
+    /**
+     * Get agent identifier for learning traits.
+     *
+     * @return string
+     */
+    protected function getAgentIdentifier(): string
     {
         return $this->name;
     }
