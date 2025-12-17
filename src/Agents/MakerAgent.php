@@ -87,9 +87,9 @@ class MakerAgent implements AgentInterface
         // Enable ML features if requested
         if ($this->useMLOptimization) {
             $historyPath = $options['ml_history_path'] ?? 'storage/maker_history.json';
-            
+
             $this->enableLearning($historyPath);
-            
+
             $this->enableParameterOptimization(
                 historyPath: str_replace('.json', '_params.json', $historyPath),
                 defaults: [
@@ -112,11 +112,11 @@ class MakerAgent implements AgentInterface
                 'max_decomposition_depth',
                 'enable_red_flagging',
             ]);
-            
+
             $this->votingK = (int)($params['voting_k'] ?? $this->votingK);
             $this->maxDecompositionDepth = (int)($params['max_decomposition_depth'] ?? $this->maxDecompositionDepth);
             $this->enableRedFlagging = ((int)($params['enable_red_flagging'] ?? 1)) === 1;
-            
+
             $this->logger->info('ML-optimized MAKER parameters', [
                 'voting_k' => $this->votingK,
                 'max_decomposition_depth' => $this->maxDecompositionDepth,
@@ -687,13 +687,13 @@ class MakerAgent implements AgentInterface
             messages: [],
             iterations: $this->executionStats['total_steps']
         );
-        
+
         $this->recordExecution($task, $result, [
             'duration' => $duration,
             'error_rate' => $this->calculateErrorRate(),
             'quality_score' => $qualityScore,
         ]);
-        
+
         $this->recordParameterPerformance(
             $task,
             parameters: [
@@ -714,25 +714,25 @@ class MakerAgent implements AgentInterface
     {
         // Base score from low error rate (inverse relationship)
         $errorPoints = (1.0 - $errorRate) * 5.0;
-        
+
         // Efficiency bonus (fewer steps is better for same result)
         $decompositionRatio = $stats['decompositions'] / max(1, $stats['atomic_executions']);
-        $efficiencyPoints = match(true) {
+        $efficiencyPoints = match (true) {
             $decompositionRatio < 0.3 => 2.5,  // Very efficient (fewer decompositions)
             $decompositionRatio < 0.5 => 2.0,
             $decompositionRatio < 0.7 => 1.5,
             default => 1.0,
         };
-        
+
         // Consensus quality (fewer votes needed is better)
         $votingEfficiency = $stats['votes_cast'] / max(1, $stats['atomic_executions']);
-        $votingPoints = match(true) {
+        $votingPoints = match (true) {
             $votingEfficiency <= 3 => 2.5,  // Quick consensus
             $votingEfficiency <= 5 => 2.0,
             $votingEfficiency <= 7 => 1.5,
             default => 1.0,
         };
-        
+
         return min(10.0, $errorPoints + $efficiencyPoints + $votingPoints);
     }
 

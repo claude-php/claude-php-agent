@@ -53,9 +53,9 @@ class DialogAgent implements AgentInterface, ConversationalInterface
         // Enable ML features if requested
         if ($this->useMLOptimization) {
             $historyPath = $options['ml_history_path'] ?? 'storage/dialog_history.json';
-            
+
             $this->enableLearning($historyPath);
-            
+
             $this->enableParameterOptimization(
                 historyPath: str_replace('.json', '_params.json', $historyPath),
                 defaults: [
@@ -63,7 +63,7 @@ class DialogAgent implements AgentInterface, ConversationalInterface
                     'max_context_tokens' => 1000,
                 ]
             );
-            
+
             $this->enableStrategyLearning(
                 strategies: ['direct_response', 'clarifying_question', 'summarize_context'],
                 defaultStrategy: 'direct_response',
@@ -112,14 +112,14 @@ class DialogAgent implements AgentInterface, ConversationalInterface
         // Learn optimal parameters if ML enabled
         $contextWindow = $this->defaultContextWindow;
         $strategy = 'direct_response';
-        
+
         if ($this->useMLOptimization) {
             $params = $this->learnOptimalParameters($userInput, ['context_window']);
             $contextWindow = (int)($params['context_window'] ?? $this->defaultContextWindow);
-            
+
             $strategyInfo = $this->getStrategyConfidence($userInput);
             $strategy = $strategyInfo['strategy'];
-            
+
             $this->logger->debug("ML-optimized dialog", [
                 'context_window' => $contextWindow,
                 'strategy' => $strategy,
@@ -177,7 +177,7 @@ class DialogAgent implements AgentInterface, ConversationalInterface
         $stateStr = json_encode($state);
 
         // Adjust system prompt based on strategy
-        $systemPrompt = match($strategy) {
+        $systemPrompt = match ($strategy) {
             'clarifying_question' => 'You are a conversational agent. When unclear, ask clarifying questions before responding.',
             'summarize_context' => 'You are a conversational agent. Periodically summarize the conversation to maintain clarity.',
             default => 'You are a conversational agent. Maintain context across turns and respond directly.',
@@ -218,14 +218,14 @@ class DialogAgent implements AgentInterface, ConversationalInterface
             messages: [],
             iterations: 1
         );
-        
+
         $this->recordExecution($userInput, $result, [
             'duration' => $duration,
             'response_length' => strlen($response),
         ]);
-        
+
         $qualityScore = $this->evaluateDialogQuality($userInput, $response);
-        
+
         $this->recordParameterPerformance(
             $userInput,
             parameters: ['context_window' => $contextWindow],
@@ -233,7 +233,7 @@ class DialogAgent implements AgentInterface, ConversationalInterface
             qualityScore: $qualityScore,
             duration: $duration
         );
-        
+
         $this->recordStrategyPerformance(
             $userInput,
             strategy: $strategy,
@@ -250,23 +250,23 @@ class DialogAgent implements AgentInterface, ConversationalInterface
     {
         $responseLength = strlen($response);
         $inputLength = strlen($userInput);
-        
+
         // Base score from response quality
-        $baseScore = match(true) {
+        $baseScore = match (true) {
             $responseLength < 20 => 4.0,
             $responseLength < 100 => 6.0,
             $responseLength < 300 => 8.0,
             default => 7.5, // Very long might be too verbose
         };
-        
+
         // Bonus for appropriate response length relative to input
         $ratio = $responseLength / max(1, $inputLength);
-        $ratioBonus = match(true) {
+        $ratioBonus = match (true) {
             $ratio > 0.5 && $ratio < 5.0 => 1.5, // Good ratio
             $ratio > 5.0 && $ratio < 10.0 => 0.5, // Acceptable
             default => 0.0,
         };
-        
+
         return min(10.0, $baseScore + $ratioBonus);
     }
 
@@ -303,9 +303,9 @@ class DialogAgent implements AgentInterface, ConversationalInterface
         if (!$result->isSuccess()) {
             return 0.0;
         }
-        
+
         $answerLength = strlen($result->getAnswer());
-        return match(true) {
+        return match (true) {
             $answerLength < 20 => 4.0,
             $answerLength < 100 => 7.0,
             $answerLength < 300 => 8.5,
