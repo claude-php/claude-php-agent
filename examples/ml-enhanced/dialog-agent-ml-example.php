@@ -18,8 +18,7 @@ if (! $apiKey) {
 }
 
 $client = new ClaudePhp($apiKey);
-$logger = new Logger('DialogML');
-$logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
+$logger = new \Psr\Log\NullLogger();
 
 echo "=== DialogAgent with ML Optimization ===\n\n";
 

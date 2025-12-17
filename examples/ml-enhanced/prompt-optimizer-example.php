@@ -18,8 +18,7 @@ if (! $apiKey) {
 }
 
 $client = new ClaudePhp($apiKey);
-$logger = new Logger('PromptOptimizer');
-$logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
+$logger = new \Psr\Log\NullLogger();
 
 echo "=== PromptOptimizer - Learn from History ===\n\n";
 

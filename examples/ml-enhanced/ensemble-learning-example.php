@@ -7,7 +7,7 @@ require_once __DIR__ . '/../load-env.php';
 
 use ClaudeAgents\Agents\ReactAgent;
 use ClaudeAgents\ML\EnsembleLearning;
-use ClaudeAgents\Tools\CalculatorTool;
+use ClaudeAgents\Tools\BuiltIn\CalculatorTool;
 use ClaudePhp\ClaudePhp;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -20,8 +20,7 @@ if (! $apiKey) {
 }
 
 $client = new ClaudePhp($apiKey);
-$logger = new Logger('EnsembleML');
-$logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
+$logger = new \Psr\Log\NullLogger();
 
 echo "=== EnsembleLearning - Combining Multiple Agents ===\n\n";
 

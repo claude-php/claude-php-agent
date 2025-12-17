@@ -46,10 +46,10 @@ class EnsembleLearning
         $historyPath = $options['history_store_path'] ?? __DIR__ . '/../../storage/ensemble_history.json';
         
         if (isset($options['client'])) {
-            $this->embedder = new TaskEmbedder($options['client'], ['logger' => $this->logger]);
+            $this->embedder = new TaskEmbedder();
         }
         
-        $this->historyStore = new TaskHistoryStore($historyPath, ['logger' => $this->logger]);
+        $this->historyStore = new TaskHistoryStore($historyPath, false, 1000);
     }
 
     /**
@@ -467,16 +467,5 @@ class EnsembleLearning
         return $this;
     }
 
-    /**
-     * Get current agent weights.
-     */
-    public function getAgentWeights(array $agentIds): array
-    {
-        if (!empty($this->agentWeights)) {
-            return $this->agentWeights;
-        }
-
-        return $this->getAgentWeights($agentIds);
-    }
 }
 

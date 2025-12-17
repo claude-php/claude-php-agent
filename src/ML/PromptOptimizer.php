@@ -44,8 +44,8 @@ class PromptOptimizer
         
         $historyPath = $options['history_store_path'] ?? __DIR__ . '/../../storage/prompt_history.json';
         
-        $this->embedder = new TaskEmbedder($client, ['logger' => $this->logger]);
-        $this->historyStore = new TaskHistoryStore($historyPath, ['logger' => $this->logger]);
+        $this->embedder = new TaskEmbedder();
+        $this->historyStore = new TaskHistoryStore($historyPath, false, 1000);
         $this->knnMatcher = new KNNMatcher();
     }
 
@@ -70,10 +70,14 @@ class PromptOptimizer
         $temperature = $options['temperature'] ?? 0.7;
 
         // Embed the task context
-        $taskEmbedding = $this->embedder->embed($taskContext ?: $originalPrompt, []);
+        $taskAnalysis = [
+            'description' => $taskContext ?: $originalPrompt,
+            'characteristics' => ['type' => 'prompt_optimization'],
+        ];
+        $taskEmbedding = $this->embedder->embed($taskAnalysis);
 
         // Find similar successful prompts
-        $similarPrompts = $this->historyStore->findSimilarTasks($taskEmbedding, $k);
+        $similarPrompts = $this->historyStore->findSimilar($taskEmbedding, $k);
 
         if (empty($similarPrompts)) {
             $this->logger->info('No historical data found, returning original prompt');
@@ -123,22 +127,27 @@ class PromptOptimizer
         float $duration
     ): void {
         try {
-            $taskEmbedding = $this->embedder->embed($taskContext, []);
+            $taskAnalysis = [
+                'description' => $taskContext,
+                'characteristics' => ['type' => 'prompt_optimization'],
+            ];
+            $taskEmbedding = $this->embedder->embed($taskAnalysis);
             
-            $this->historyStore->recordTaskOutcome(
-                task: $taskContext,
-                taskEmbedding: $taskEmbedding,
-                agentId: 'prompt:' . substr(md5($prompt), 0, 8),
-                qualityScore: $qualityScore,
-                isSuccess: $success,
-                duration: $duration,
-                metadata: [
+            $this->historyStore->record([
+                'id' => uniqid('prompt_', true),
+                'task_vector' => $taskEmbedding,
+                'agent_id' => 'prompt:' . substr(md5($prompt), 0, 8),
+                'quality' => $qualityScore,
+                'success' => $success,
+                'duration' => $duration,
+                'metadata' => [
+                    'task' => $taskContext,
                     'prompt' => $prompt,
                     'prompt_length' => strlen($prompt),
                     'token_usage' => $tokenUsage,
                     'tokens_per_second' => $duration > 0 ? $tokenUsage / $duration : 0,
-                ]
-            );
+                ],
+            ]);
 
             $this->logger->debug('Recorded prompt performance', [
                 'quality_score' => $qualityScore,
@@ -164,8 +173,12 @@ class PromptOptimizer
 
         $this->logger->info('Comparing prompts', ['count' => count($prompts)]);
 
-        $taskEmbedding = $this->embedder->embed($taskContext, []);
-        $similarTasks = $this->historyStore->findSimilarTasks($taskEmbedding, 10);
+        $taskAnalysis = [
+            'description' => $taskContext,
+            'characteristics' => ['type' => 'prompt_optimization'],
+        ];
+        $taskEmbedding = $this->embedder->embed($taskAnalysis);
+        $similarTasks = $this->historyStore->findSimilar($taskEmbedding, 10);
 
         $scores = [];
         foreach ($prompts as $index => $prompt) {

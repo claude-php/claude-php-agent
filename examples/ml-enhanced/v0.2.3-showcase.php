@@ -12,7 +12,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../load-env.php';
 
 use ClaudeAgents\Agents\PlanExecuteAgent;
@@ -21,7 +21,11 @@ use ClaudeAgents\Tools\BuiltIn\CalculatorTool;
 use ClaudePhp\ClaudePhp;
 
 // Create client
-$client = ClaudePhp::make(apiKey: getenv('ANTHROPIC_API_KEY'));
+$apiKey = getenv('ANTHROPIC_API_KEY');
+if (!$apiKey) {
+    die('ANTHROPIC_API_KEY not found in environment');
+}
+$client = new ClaudePhp($apiKey);
 
 echo "╔══════════════════════════════════════════════════════════════════╗\n";
 echo "║         v0.2.3 ML Enhancements Showcase                         ║\n";

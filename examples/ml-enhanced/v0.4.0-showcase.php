@@ -9,7 +9,7 @@ use ClaudeAgents\Agents\ReactAgent;
 use ClaudeAgents\ML\ActiveLearning;
 use ClaudeAgents\ML\MetaLearning;
 use ClaudeAgents\ML\TransferLearning;
-use ClaudeAgents\Tools\CalculatorTool;
+use ClaudeAgents\Tools\BuiltIn\CalculatorTool;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\NullLogger;
 

@@ -26,8 +26,7 @@ if (! $apiKey) {
 
 $client = new ClaudePhp($apiKey);
 
-$logger = new Logger('MLV030Showcase');
-$logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
+$logger = new \Psr\Log\NullLogger();
 
 echo <<<BANNER
 ╔══════════════════════════════════════════════════════════════════╗

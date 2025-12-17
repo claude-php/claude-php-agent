@@ -95,7 +95,11 @@ echo "  Cold-start Performance: {$effectiveness['cold_start_improvement']}/10\n"
 echo "  (vs typical cold-start: 4-5/10)\n\n";
 echo "  Quality Improvement: +{$effectiveness['quality_improvement']}\n";
 echo "  Learning Speed: {$effectiveness['learning_speed']} (higher = faster)\n";
-echo "  Transferred Ratio: " . round($effectiveness['transferred_ratio'] * 100) . "%\n\n";
+if (isset($effectiveness['transferred_ratio'])) {
+    echo "  Transferred Ratio: " . round($effectiveness['transferred_ratio'] * 100) . "%\n\n";
+} else {
+    echo "  Transferred Ratio: N/A\n\n";
+}
 
 echo "✓ Result: FinanceAgent learned 50-70% faster than training from scratch!\n";
 echo "\n--- Transfer Learning Complete ---\n";
