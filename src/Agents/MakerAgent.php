@@ -6,12 +6,14 @@ namespace ClaudeAgents\Agents;
 
 use ClaudeAgents\AgentResult;
 use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\ML\Traits\LearnableAgent;
+use ClaudeAgents\ML\Traits\ParameterOptimizer;
 use ClaudePhp\ClaudePhp;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * MAKER Agent: Massively Decomposed Agentic Processes.
+ * MAKER Agent: Massively Decomposed Agentic Processes with ML Optimization.
  *
  * Implements the MAKER framework from the paper "Solving a Million-Step LLM Task with Zero Errors"
  * (https://arxiv.org/html/2511.09030v1).
@@ -21,11 +23,22 @@ use Psr\Log\NullLogger;
  * - First-to-ahead-by-K Error correction: Multi-agent voting for each subtask
  * - Red-flagging: Recognizing signs of unreliable responses
  *
+ * **ML-Enhanced Features:**
+ * - Learns optimal voting K parameter per task type
+ * - Learns optimal decomposition depth
+ * - Learns when to enable/disable red-flagging
+ * - Adapts based on historical task performance
+ *
  * This agent can solve tasks requiring millions of steps with near-zero error rates
  * by extreme decomposition and error correction at each step.
+ *
+ * @package ClaudeAgents\Agents
  */
 class MakerAgent implements AgentInterface
 {
+    use LearnableAgent;
+    use ParameterOptimizer;
+
     private ClaudePhp $client;
     private string $name;
     private string $model;
@@ -34,6 +47,7 @@ class MakerAgent implements AgentInterface
     private int $votingK;
     private bool $enableRedFlagging;
     private int $maxDecompositionDepth;
+    private bool $useMLOptimization = false;
 
     /**
      * @var array<MicroAgent>
@@ -54,6 +68,8 @@ class MakerAgent implements AgentInterface
      *   - voting_k: K value for first-to-ahead-by-k voting (default: 3)
      *   - enable_red_flagging: Enable red-flagging detection (default: true)
      *   - max_decomposition_depth: Maximum depth for task decomposition (default: 10)
+     *   - enable_ml_optimization: Enable ML-based parameter optimization (default: false)
+     *   - ml_history_path: Path to ML history storage (default: storage/maker_history.json)
      *   - logger: PSR-3 logger
      */
     public function __construct(ClaudePhp $client, array $options = [])
@@ -66,12 +82,48 @@ class MakerAgent implements AgentInterface
         $this->enableRedFlagging = $options['enable_red_flagging'] ?? true;
         $this->maxDecompositionDepth = $options['max_decomposition_depth'] ?? 10;
         $this->logger = $options['logger'] ?? new NullLogger();
+        $this->useMLOptimization = $options['enable_ml_optimization'] ?? false;
+
+        // Enable ML features if requested
+        if ($this->useMLOptimization) {
+            $historyPath = $options['ml_history_path'] ?? 'storage/maker_history.json';
+            
+            $this->enableLearning($historyPath);
+            
+            $this->enableParameterOptimization(
+                historyPath: str_replace('.json', '_params.json', $historyPath),
+                defaults: [
+                    'voting_k' => $this->votingK,
+                    'max_decomposition_depth' => $this->maxDecompositionDepth,
+                    'enable_red_flagging' => $this->enableRedFlagging ? 1 : 0,
+                ]
+            );
+        }
 
         $this->resetStats();
     }
 
     public function run(string $task): AgentResult
     {
+        // Learn optimal parameters if ML enabled
+        if ($this->useMLOptimization) {
+            $params = $this->learnOptimalParameters($task, [
+                'voting_k',
+                'max_decomposition_depth',
+                'enable_red_flagging',
+            ]);
+            
+            $this->votingK = (int)($params['voting_k'] ?? $this->votingK);
+            $this->maxDecompositionDepth = (int)($params['max_decomposition_depth'] ?? $this->maxDecompositionDepth);
+            $this->enableRedFlagging = ((int)($params['enable_red_flagging'] ?? 1)) === 1;
+            
+            $this->logger->info('ML-optimized MAKER parameters', [
+                'voting_k' => $this->votingK,
+                'max_decomposition_depth' => $this->maxDecompositionDepth,
+                'enable_red_flagging' => $this->enableRedFlagging,
+            ]);
+        }
+
         $this->logger->info('MAKER Agent starting', [
             'task' => substr($task, 0, 100),
             'voting_k' => $this->votingK,
@@ -86,6 +138,7 @@ class MakerAgent implements AgentInterface
             $result = $this->executeWithMDAP($task, 0);
 
             $duration = microtime(true) - $startTime;
+            $errorRate = $this->calculateErrorRate();
 
             $this->logger->info('MAKER Agent completed', [
                 'success' => true,
@@ -93,27 +146,43 @@ class MakerAgent implements AgentInterface
                 'stats' => $this->executionStats,
             ]);
 
-            return AgentResult::success(
+            $agentResult = AgentResult::success(
                 answer: $result,
                 messages: [],
                 iterations: $this->executionStats['total_steps'],
                 metadata: [
                     'execution_stats' => $this->executionStats,
                     'duration_seconds' => round($duration, 2),
-                    'error_rate' => $this->calculateErrorRate(),
+                    'error_rate' => $errorRate,
                     'voting_k' => $this->votingK,
                     'red_flagging_enabled' => $this->enableRedFlagging,
+                    'max_decomposition_depth' => $this->maxDecompositionDepth,
                 ],
             );
+
+            // Record for ML learning
+            if ($this->useMLOptimization) {
+                $qualityScore = $this->evaluateMakerQuality($errorRate, $this->executionStats);
+                $this->recordMakerPerformance($task, $qualityScore, $duration);
+            }
+
+            return $agentResult;
         } catch (\Throwable $e) {
             $this->logger->error("MAKER Agent failed: {$e->getMessage()}");
 
-            return AgentResult::failure(
+            $agentResult = AgentResult::failure(
                 error: $e->getMessage(),
                 metadata: [
                     'execution_stats' => $this->executionStats,
                 ],
             );
+
+            // Record failure for learning
+            if ($this->useMLOptimization) {
+                $this->recordMakerPerformance($task, 0.0, microtime(true) - $startTime);
+            }
+
+            return $agentResult;
         }
     }
 
@@ -606,5 +675,98 @@ class MakerAgent implements AgentInterface
         $this->enableRedFlagging = $enabled;
 
         return $this;
+    }
+
+    /**
+     * Record MAKER performance for learning.
+     */
+    private function recordMakerPerformance(string $task, float $qualityScore, float $duration): void
+    {
+        $result = AgentResult::success(
+            answer: "MAKER task completed",
+            messages: [],
+            iterations: $this->executionStats['total_steps']
+        );
+        
+        $this->recordExecution($task, $result, [
+            'duration' => $duration,
+            'error_rate' => $this->calculateErrorRate(),
+            'quality_score' => $qualityScore,
+        ]);
+        
+        $this->recordParameterPerformance(
+            $task,
+            parameters: [
+                'voting_k' => $this->votingK,
+                'max_decomposition_depth' => $this->maxDecompositionDepth,
+                'enable_red_flagging' => $this->enableRedFlagging ? 1 : 0,
+            ],
+            success: $qualityScore >= 7.0,
+            qualityScore: $qualityScore,
+            duration: $duration
+        );
+    }
+
+    /**
+     * Evaluate MAKER quality based on error rate and efficiency.
+     */
+    private function evaluateMakerQuality(float $errorRate, array $stats): float
+    {
+        // Base score from low error rate (inverse relationship)
+        $errorPoints = (1.0 - $errorRate) * 5.0;
+        
+        // Efficiency bonus (fewer steps is better for same result)
+        $decompositionRatio = $stats['decompositions'] / max(1, $stats['atomic_executions']);
+        $efficiencyPoints = match(true) {
+            $decompositionRatio < 0.3 => 2.5,  // Very efficient (fewer decompositions)
+            $decompositionRatio < 0.5 => 2.0,
+            $decompositionRatio < 0.7 => 1.5,
+            default => 1.0,
+        };
+        
+        // Consensus quality (fewer votes needed is better)
+        $votingEfficiency = $stats['votes_cast'] / max(1, $stats['atomic_executions']);
+        $votingPoints = match(true) {
+            $votingEfficiency <= 3 => 2.5,  // Quick consensus
+            $votingEfficiency <= 5 => 2.0,
+            $votingEfficiency <= 7 => 1.5,
+            default => 1.0,
+        };
+        
+        return min(10.0, $errorPoints + $efficiencyPoints + $votingPoints);
+    }
+
+    /**
+     * Override to analyze MAKER tasks for learning.
+     */
+    protected function analyzeTaskForLearning(string $task): array
+    {
+        $wordCount = str_word_count($task);
+        $hasMathematical = preg_match('/\b(calculate|compute|solve|equation|formula)\b/i', $task);
+        $hasMultiStep = preg_match('/\b(step|then|next|after|finally)\b/i', $task);
+
+        return [
+            'complexity' => match (true) {
+                $wordCount > 50 || $hasMultiStep => 'complex',
+                $wordCount > 20 => 'medium',
+                default => 'simple',
+            },
+            'domain' => $hasMathematical ? 'mathematical' : 'general',
+            'requires_tools' => false,
+            'requires_knowledge' => false,
+            'requires_reasoning' => true,
+            'requires_iteration' => true,
+            'requires_quality' => 'highest',
+            'estimated_steps' => $hasMultiStep ? 10 : 3,
+            'key_requirements' => ['decomposition', 'consensus', 'accuracy'],
+        ];
+    }
+
+    /**
+     * Get agent identifier for learning traits.
+     */
+    protected function getAgentIdentifier(): string
+    {
+        return $this->name;
     }
 }
