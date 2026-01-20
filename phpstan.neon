@@ -6,6 +6,7 @@ parameters:
         - vendor
     tmpDir: build/phpstan
     treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         # Ignore missing generic/iterable value types for flexibility
         -
