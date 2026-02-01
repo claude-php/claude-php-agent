@@ -99,7 +99,7 @@ class StreamEventTest extends TestCase
 
     public function testMetadataFactory(): void
     {
-        $metadata = ['model' => 'claude-3', 'version' => '1.0'];
+        $metadata = ['model' => 'claude-sonnet-4-5', 'version' => '1.0'];
         $event = StreamEvent::metadata($metadata);
 
         $this->assertEquals(StreamEvent::TYPE_METADATA, $event->getType());

@@ -63,7 +63,7 @@ class TurnTest extends TestCase
 
     public function test_creates_turn_with_custom_metadata(): void
     {
-        $metadata = ['model' => 'claude-3', 'tokens' => 150];
+        $metadata = ['model' => 'claude-sonnet-4-5', 'tokens' => 150];
         $turn = new Turn('Input', 'Response', $metadata);
 
         $this->assertSame($metadata, $turn->getMetadata());
@@ -134,7 +134,7 @@ class TurnTest extends TestCase
     public function test_metadata_can_store_complex_data(): void
     {
         $metadata = [
-            'model_info' => ['name' => 'claude-3', 'version' => '1.0'],
+            'model_info' => ['name' => 'claude-sonnet-4-5', 'version' => '1.0'],
             'tokens' => ['input' => 100, 'output' => 50],
             'flags' => [true, false, true],
         ];

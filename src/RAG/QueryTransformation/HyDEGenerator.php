@@ -20,9 +20,8 @@ class HyDEGenerator
      */
     public function __construct(
         private readonly ClaudePhp $client,
-        private readonly string $model = 'claude-3-haiku-20240307',
-    ) {
-    }
+        private readonly string $model = 'claude-haiku-4-5',
+    ) {}
 
     /**
      * Generate a hypothetical document for the query.
@@ -50,11 +49,11 @@ class HyDEGenerator
             ]);
 
             $content = $response->content[0] ?? null;
-            if ($content === null || ! isset($content['text'])) {
+            if ($content === null || $content->type !== 'text') {
                 return $query;
             }
 
-            return trim($content['text']);
+            return trim($content->text);
         } catch (\Throwable $e) {
             // Fallback to original query on error
             return $query;

@@ -37,7 +37,7 @@ Easier access to custom metadata:
 ```php
 $result = AgentResult::success('Answer', [], 1, [
     'custom_score' => 0.95,
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 
 // Get values with defaults

@@ -24,7 +24,7 @@ class EntityExtractor
         private readonly ClaudePhp $client,
         array $options = []
     ) {
-        $this->model = $options['model'] ?? 'claude-3-5-haiku-20241022';
+        $this->model = $options['model'] ?? 'claude-haiku-4-5';
     }
 
     /**

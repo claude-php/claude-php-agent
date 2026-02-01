@@ -308,7 +308,7 @@ use ClaudeAgents\RAG\Reranking\LLMReranker;
 
 $reranker = new LLMReranker(
     client: $client,
-    model: 'claude-3-haiku-20240307'
+    model: 'claude-haiku-4-5'
 );
 
 $reranked = $reranker->rerank($query, $initialResults, topK: 5);

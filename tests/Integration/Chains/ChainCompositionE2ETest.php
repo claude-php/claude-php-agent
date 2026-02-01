@@ -57,7 +57,7 @@ class ChainCompositionE2ETest extends TestCase
                     'text' => $text,
                 ],
             ],
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5',
             stop_reason: 'end_turn',
             stop_sequence: null,
             usage: $usage
@@ -86,7 +86,7 @@ class ChainCompositionE2ETest extends TestCase
         $template = PromptTemplate::create('Say hello to {name}');
         $chain = LLMChain::create($this->mockClient)
             ->withPromptTemplate($template)
-            ->withModel('claude-3-5-sonnet-20241022');
+            ->withModel('claude-sonnet-4-5');
 
         $result = $chain->invoke(['name' => 'World']);
 
@@ -111,7 +111,7 @@ class ChainCompositionE2ETest extends TestCase
     public function testComplexSequentialPipeline(): void
     {
         // Step 1: Transform input
-        $normalize = TransformChain::create(fn (array $input): array => [
+        $normalize = TransformChain::create(fn(array $input): array => [
             'normalized' => strtolower($input['text'] ?? ''),
         ]);
 
@@ -122,7 +122,7 @@ class ChainCompositionE2ETest extends TestCase
             ->withPromptTemplate(PromptTemplate::create('Analyze sentiment: {normalized}'));
 
         // Step 3: Format result
-        $format = TransformChain::create(fn (array $input): array => [
+        $format = TransformChain::create(fn(array $input): array => [
             'formatted' => 'Result: ' . ($input['result'] ?? 'unknown'),
         ]);
 
@@ -142,11 +142,11 @@ class ChainCompositionE2ETest extends TestCase
     public function testParallelAnalysisWithDifferentStrategies(): void
     {
         // Create multiple analysis chains
-        $sentiment = TransformChain::create(fn (array $input): array => [
+        $sentiment = TransformChain::create(fn(array $input): array => [
             'sentiment' => 'positive',
         ]);
 
-        $topics = TransformChain::create(fn (array $input): array => [
+        $topics = TransformChain::create(fn(array $input): array => [
             'topics' => ['product', 'review'],
         ]);
 
@@ -171,17 +171,17 @@ class ChainCompositionE2ETest extends TestCase
             ->withPromptTemplate(PromptTemplate::create('Review code: {content}'));
 
         // Text analysis chain
-        $textChain = TransformChain::create(fn (array $input): array => [
+        $textChain = TransformChain::create(fn(array $input): array => [
             'analysis' => 'Text processed',
         ]);
 
         $router = RouterChain::create()
             ->addRoute(
-                fn (array $input): bool => str_contains($input['content'] ?? '', '<?php'),
+                fn(array $input): bool => str_contains($input['content'] ?? '', '<?php'),
                 $codeChain
             )
             ->addRoute(
-                fn (array $input): bool => isset($input['type']) && $input['type'] === 'text',
+                fn(array $input): bool => isset($input['type']) && $input['type'] === 'text',
                 $textChain
             )
             ->setDefault($textChain);
@@ -219,8 +219,8 @@ class ChainCompositionE2ETest extends TestCase
     public function testNestedChainComposition(): void
     {
         // Inner parallel chain
-        $inner1 = TransformChain::create(fn (array $input): array => ['a' => 1]);
-        $inner2 = TransformChain::create(fn (array $input): array => ['b' => 2]);
+        $inner1 = TransformChain::create(fn(array $input): array => ['a' => 1]);
+        $inner2 = TransformChain::create(fn(array $input): array => ['b' => 2]);
 
         $innerParallel = ParallelChain::create()
             ->addChain('inner1', $inner1)
@@ -228,11 +228,11 @@ class ChainCompositionE2ETest extends TestCase
             ->withAggregation('merge');
 
         // Outer sequential chain
-        $preprocess = TransformChain::create(fn (array $input): array => [
+        $preprocess = TransformChain::create(fn(array $input): array => [
             'processed' => true,
         ]);
 
-        $postprocess = TransformChain::create(fn (array $input): array => [
+        $postprocess = TransformChain::create(fn(array $input): array => [
             'final' => 'done',
         ]);
 
@@ -256,7 +256,7 @@ class ChainCompositionE2ETest extends TestCase
         $afterCalled = false;
         $errorCalled = false;
 
-        $chain = TransformChain::create(fn (array $input): array => ['result' => 'success'])
+        $chain = TransformChain::create(fn(array $input): array => ['result' => 'success'])
             ->onBefore(function (ChainInput $input) use (&$beforeCalled) {
                 $beforeCalled = true;
             })
@@ -279,7 +279,7 @@ class ChainCompositionE2ETest extends TestCase
         $errorCalled = false;
 
         $chain = TransformChain::create(
-            fn (array $input): array => throw new \RuntimeException('Test error')
+            fn(array $input): array => throw new \RuntimeException('Test error')
         )
             ->onError(function (ChainInput $input, \Throwable $error) use (&$errorCalled) {
                 $errorCalled = true;

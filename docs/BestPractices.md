@@ -972,12 +972,12 @@ class BudgetTracker
 ```php
 // For simple classification
 $config = AgentConfig::fromArray([
-    'model' => 'claude-3-haiku-20240307',  // Cheaper
+    'model' => 'claude-haiku-4-5',  // Cheaper
 ]);
 
 // For complex research
 $config = AgentConfig::fromArray([
-    'model' => 'claude-opus-4-20250514',  // More capable
+    'model' => 'claude-opus-4-5',  // More capable
 ]);
 ```
 

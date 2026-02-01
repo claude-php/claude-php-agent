@@ -19,9 +19,8 @@ class LLMReranker implements RerankerInterface
      */
     public function __construct(
         private readonly ClaudePhp $client,
-        private readonly string $model = 'claude-3-haiku-20240307',
-    ) {
-    }
+        private readonly string $model = 'claude-haiku-4-5',
+    ) {}
 
     public function rerank(string $query, array $documents, int $topK): array
     {
@@ -43,11 +42,11 @@ class LLMReranker implements RerankerInterface
         }
 
         // Sort by score descending
-        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+        usort($scored, fn($a, $b) => $b['score'] <=> $a['score']);
 
         // Return top K
         return array_slice(
-            array_map(fn ($x) => $x['document'], $scored),
+            array_map(fn($x) => $x['document'], $scored),
             0,
             $topK
         );
@@ -81,11 +80,11 @@ class LLMReranker implements RerankerInterface
             ]);
 
             $content = $response->content[0] ?? null;
-            if ($content === null || ! isset($content['text'])) {
+            if ($content === null || $content->type !== 'text') {
                 return 5.0; // Default score if parsing fails
             }
 
-            $text = trim($content['text']);
+            $text = trim($content->text);
             $score = (float) $text;
 
             // Clamp to 0-10 range

@@ -46,7 +46,7 @@ class ReactAgentTest extends TestCase
             type: 'message',
             role: 'assistant',
             content: $content,
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5',
             stop_reason: $stopReason,
             stop_sequence: null,
             usage: new Usage(
@@ -77,7 +77,7 @@ class ReactAgentTest extends TestCase
     {
         $tool = Tool::create('test_tool')
             ->description('A test tool')
-            ->handler(fn (): string => 'result');
+            ->handler(fn(): string => 'result');
 
         $agent = new ReactAgent($this->mockClient, [
             'tools' => [$tool],
@@ -99,7 +99,7 @@ class ReactAgentTest extends TestCase
 
     public function testConstructorWithModel(): void
     {
-        $model = 'claude-3-opus-20240229';
+        $model = 'claude-opus-4-5';
         $agent = new ReactAgent($this->mockClient, [
             'model' => $model,
         ]);
@@ -157,7 +157,7 @@ class ReactAgentTest extends TestCase
     {
         $tool = Tool::create('calculator')
             ->description('A calculator')
-            ->handler(fn (): int => 42);
+            ->handler(fn(): int => 42);
 
         $agent = new ReactAgent($this->mockClient);
         $result = $agent->addTool($tool);
@@ -170,12 +170,12 @@ class ReactAgentTest extends TestCase
 
     public function testAddMultipleTools(): void
     {
-        $tool1 = Tool::create('tool1')->handler(fn (): string => 'a');
-        $tool2 = Tool::create('tool2')->handler(fn (): string => 'b');
+        $tool1 = Tool::create('tool1')->handler(fn(): string => 'a');
+        $tool2 = Tool::create('tool2')->handler(fn(): string => 'b');
 
         $agent = new ReactAgent($this->mockClient);
         $agent->addTool($tool1)
-              ->addTool($tool2);
+            ->addTool($tool2);
 
         $tools = $agent->getAgent()->getTools();
         $this->assertTrue($tools->has('tool1'));
@@ -248,7 +248,7 @@ class ReactAgentTest extends TestCase
         $this->assertContains('agent.completed', $types);
 
         // Ensure iteration payload is present
-        $iterationUpdates = array_values(array_filter($updates, fn (AgentUpdate $u) => $u->getType() === 'llm.iteration'));
+        $iterationUpdates = array_values(array_filter($updates, fn(AgentUpdate $u) => $u->getType() === 'llm.iteration'));
         $this->assertNotEmpty($iterationUpdates);
         $data = $iterationUpdates[0]->getData();
         $this->assertSame(1, $data['iteration']);
@@ -282,7 +282,7 @@ class ReactAgentTest extends TestCase
         $tool = Tool::create('calculator')
             ->numberParam('a', 'First number')
             ->numberParam('b', 'Second number')
-            ->handler(fn (array $input): int => $input['a'] + $input['b']);
+            ->handler(fn(array $input): int => $input['a'] + $input['b']);
 
         $toolUseResponse = $this->createMockMessage(
             [
@@ -356,7 +356,7 @@ class ReactAgentTest extends TestCase
     public function testToolExecutionCallback(): void
     {
         $tool = Tool::create('test')
-            ->handler(fn (): string => 'result');
+            ->handler(fn(): string => 'result');
 
         $toolUseResponse = $this->createMockMessage(
             [
@@ -414,12 +414,12 @@ class ReactAgentTest extends TestCase
 
     public function testFluentInterface(): void
     {
-        $tool = Tool::create('test')->handler(fn (): string => 'result');
+        $tool = Tool::create('test')->handler(fn(): string => 'result');
 
         $agent = (new ReactAgent($this->mockClient))
             ->addTool($tool)
-            ->onIteration(fn () => null)
-            ->onToolExecution(fn () => null);
+            ->onIteration(fn() => null)
+            ->onToolExecution(fn() => null);
 
         $this->assertInstanceOf(ReactAgent::class, $agent);
     }
@@ -486,11 +486,11 @@ class ReactAgentTest extends TestCase
     {
         $searchTool = Tool::create('search')
             ->stringParam('query', 'Search query')
-            ->handler(fn (array $input): string => "Results for: {$input['query']}");
+            ->handler(fn(array $input): string => "Results for: {$input['query']}");
 
         $analyzeTool = Tool::create('analyze')
             ->stringParam('data', 'Data to analyze')
-            ->handler(fn (array $input): string => 'Analysis complete');
+            ->handler(fn(array $input): string => 'Analysis complete');
 
         // First iteration: search
         $response1 = $this->createMockMessage(

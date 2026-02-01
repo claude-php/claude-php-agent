@@ -137,7 +137,7 @@ $event = StreamEvent::toolUse(['name' => 'calculator', 'input' => ['a' => 5]]);
 $event = StreamEvent::error('Connection failed', ['code' => 500]);
 
 // Metadata event
-$event = StreamEvent::metadata(['model' => 'claude-3', 'tokens' => 150]);
+$event = StreamEvent::metadata(['model' => 'claude-sonnet-4-5', 'tokens' => 150]);
 
 // Ping event
 $event = StreamEvent::ping();

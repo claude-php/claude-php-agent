@@ -46,7 +46,7 @@ class ReactLoopTest extends TestCase
             type: 'message',
             role: 'assistant',
             content: $content,
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-5',
             stop_reason: $stopReason,
             stop_sequence: null,
             usage: new Usage(
@@ -128,7 +128,7 @@ class ReactLoopTest extends TestCase
         $tool = Tool::create('calculator')
             ->numberParam('a', 'First number')
             ->numberParam('b', 'Second number')
-            ->handler(fn (array $input): int => $input['a'] + $input['b']);
+            ->handler(fn(array $input): int => $input['a'] + $input['b']);
 
         $config = new AgentConfig();
         $context = new AgentContext(
@@ -298,7 +298,7 @@ class ReactLoopTest extends TestCase
     public function testToolExecutionCallback(): void
     {
         $tool = Tool::create('test')
-            ->handler(fn (): string => 'result');
+            ->handler(fn(): string => 'result');
 
         $callbackCalled = false;
         $callbackToolName = '';

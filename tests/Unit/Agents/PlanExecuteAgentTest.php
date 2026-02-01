@@ -35,7 +35,7 @@ class PlanExecuteAgentTest extends TestCase
     {
         $agent = new PlanExecuteAgent($this->client, [
             'name' => 'custom_planner',
-            'model' => 'claude-3-5-sonnet-20241022',
+            'model' => 'claude-sonnet-4-5',
             'max_tokens' => 4096,
             'allow_replan' => false,
             'logger' => $this->logger,

@@ -45,7 +45,7 @@ class ConversationKGMemory
         array $options = []
     ) {
         $this->extractionInterval = $options['extraction_interval'] ?? 5;
-        $this->model = $options['model'] ?? 'claude-3-5-haiku-20241022';
+        $this->model = $options['model'] ?? 'claude-haiku-4-5';
     }
 
     /**
@@ -142,7 +142,7 @@ class ConversationKGMemory
     {
         return array_filter(
             $this->relationships,
-            fn ($rel) => $rel['subject'] === $entityName || $rel['object'] === $entityName
+            fn($rel) => $rel['subject'] === $entityName || $rel['object'] === $entityName
         );
     }
 
@@ -330,10 +330,12 @@ class ConversationKGMemory
 
             $relationships = [];
             foreach ($data as $rel) {
-                if (is_array($rel) &&
+                if (
+                    is_array($rel) &&
                     isset($rel['subject']) &&
                     isset($rel['predicate']) &&
-                    isset($rel['object'])) {
+                    isset($rel['object'])
+                ) {
                     $relationships[] = [
                         'subject' => $rel['subject'],
                         'predicate' => $rel['predicate'],

@@ -20,9 +20,8 @@ class QueryDecomposer
      */
     public function __construct(
         private readonly ClaudePhp $client,
-        private readonly string $model = 'claude-3-haiku-20240307',
-    ) {
-    }
+        private readonly string $model = 'claude-haiku-4-5',
+    ) {}
 
     /**
      * Decompose a complex query into sub-queries.
@@ -48,11 +47,11 @@ class QueryDecomposer
             ]);
 
             $content = $response->content[0] ?? null;
-            if ($content === null || ! isset($content['text'])) {
+            if ($content === null || $content->type !== 'text') {
                 return [$query];
             }
 
-            $text = $content['text'];
+            $text = $content->text;
             $lines = explode("\n", $text);
             $subQueries = [];
 

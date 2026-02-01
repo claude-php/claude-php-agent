@@ -115,7 +115,7 @@ class FileHandlerTest extends TestCase
     public function testHandleMetadataEvent(): void
     {
         $handler = new FileHandler($this->tempFile);
-        $event = StreamEvent::metadata(['version' => '1.0', 'model' => 'claude-3']);
+        $event = StreamEvent::metadata(['version' => '1.0', 'model' => 'claude-sonnet-4-5']);
 
         $handler->handle($event);
         unset($handler);

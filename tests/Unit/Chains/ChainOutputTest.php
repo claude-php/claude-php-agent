@@ -19,12 +19,12 @@ class ChainOutputTest extends TestCase
 
     public function testCreateWithMetadata(): void
     {
-        $metadata = ['tokens' => 100, 'model' => 'claude-3-5-sonnet'];
+        $metadata = ['tokens' => 100, 'model' => 'claude-sonnet-4-5'];
         $output = ChainOutput::create(['result' => 'data'], $metadata);
 
         $this->assertEquals($metadata, $output->getMetadata());
         $this->assertEquals(100, $output->getMetadataValue('tokens'));
-        $this->assertEquals('claude-3-5-sonnet', $output->getMetadataValue('model'));
+        $this->assertEquals('claude-sonnet-4-5', $output->getMetadataValue('model'));
     }
 
     public function testGetMetadataValueWithDefault(): void

@@ -146,7 +146,7 @@ new PlanExecuteAgent(ClaudePhp $client, array $options = [])
 ```php
 $agent = new PlanExecuteAgent($client, [
     'name' => 'content_planner',
-    'model' => 'claude-3-5-sonnet-20241022',
+    'model' => 'claude-sonnet-4-5',
     'max_tokens' => 4096,
     'allow_replan' => true,
     'logger' => $logger,

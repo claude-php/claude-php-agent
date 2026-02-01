@@ -28,7 +28,7 @@ class LLMSummarizer implements SummarizerInterface
     ) {
         $this->maxTokens = $options['max_tokens'] ?? 500;
         $this->focus = $options['focus'] ?? 'key_points';
-        $this->model = $options['model'] ?? 'claude-3-5-haiku-20241022';
+        $this->model = $options['model'] ?? 'claude-haiku-4-5';
     }
 
     public function summarize(array $messages, string $existingSummary = ''): string

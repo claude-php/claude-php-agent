@@ -96,7 +96,7 @@ The ReactAgent accepts configuration options in its constructor:
 $agent = new ReactAgent($client, [
     'name' => 'my_react_agent',           // Agent identifier
     'system' => 'Custom system prompt',   // System instructions
-    'model' => 'claude-3-5-sonnet-20241022', // Claude model to use
+    'model' => 'claude-sonnet-4-5', // Claude model to use
     'max_iterations' => 10,               // Maximum reasoning loops
     'max_tokens' => 4096,                 // Max tokens per response
     'tools' => [$tool1, $tool2],         // Initial tools
@@ -114,7 +114,7 @@ $agent = new ReactAgent($client, [
 |--------|------|---------|-------------|
 | `name` | string | `'react_agent'` | Unique identifier for the agent |
 | `system` | string | `null` | Custom system prompt |
-| `model` | string | `'claude-3-5-sonnet-20241022'` | Claude model to use |
+| `model` | string | `'claude-sonnet-4-5'` | Claude model to use |
 | `max_iterations` | int | `10` | Maximum reasoning loop iterations |
 | `max_tokens` | int | `4096` | Maximum tokens per API response |
 | `tools` | array | `[]` | Array of ToolInterface instances |

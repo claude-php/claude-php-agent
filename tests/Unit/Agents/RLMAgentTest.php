@@ -74,11 +74,11 @@ class RLMAgentTest extends TestCase
     public function testConstructorWithAllOptions(): void
     {
         $logger = Mockery::mock(LoggerInterface::class);
-        $tool = Tool::create('test')->handler(fn () => 'result');
+        $tool = Tool::create('test')->handler(fn() => 'result');
 
         $agent = new RLMAgent($this->mockClient, [
             'name' => 'my_rlm',
-            'model' => 'claude-3-opus-20240229',
+            'model' => 'claude-opus-4-5',
             'max_tokens' => 2048,
             'max_iterations' => 15,
             'max_recursion_depth' => 5,
@@ -95,7 +95,7 @@ class RLMAgentTest extends TestCase
     {
         $tool = Tool::create('calculator')
             ->description('A calculator')
-            ->handler(fn (): int => 42);
+            ->handler(fn(): int => 42);
 
         $agent = new RLMAgent($this->mockClient);
         $result = $agent->addTool($tool);
@@ -106,7 +106,7 @@ class RLMAgentTest extends TestCase
     public function testOnIterationCallback(): void
     {
         $agent = new RLMAgent($this->mockClient);
-        $result = $agent->onIteration(fn () => null);
+        $result = $agent->onIteration(fn() => null);
 
         $this->assertSame($agent, $result);
     }
@@ -114,7 +114,7 @@ class RLMAgentTest extends TestCase
     public function testOnToolExecutionCallback(): void
     {
         $agent = new RLMAgent($this->mockClient);
-        $result = $agent->onToolExecution(fn () => null);
+        $result = $agent->onToolExecution(fn() => null);
 
         $this->assertSame($agent, $result);
     }
@@ -122,7 +122,7 @@ class RLMAgentTest extends TestCase
     public function testOnRecursionCallback(): void
     {
         $agent = new RLMAgent($this->mockClient);
-        $result = $agent->onRecursion(fn () => null);
+        $result = $agent->onRecursion(fn() => null);
 
         $this->assertSame($agent, $result);
     }
@@ -130,7 +130,7 @@ class RLMAgentTest extends TestCase
     public function testOnUpdateCallback(): void
     {
         $agent = new RLMAgent($this->mockClient);
-        $result = $agent->onUpdate(fn () => null);
+        $result = $agent->onUpdate(fn() => null);
 
         $this->assertSame($agent, $result);
     }
@@ -158,7 +158,7 @@ class RLMAgentTest extends TestCase
         $this->assertInstanceOf(AgentResult::class, $result);
         $this->assertTrue($result->isSuccess());
         $this->assertEquals('The answer is 42', $result->getAnswer());
-        
+
         // Check RLM metadata
         $metadata = $result->getMetadata();
         $this->assertArrayHasKey('rlm', $metadata);
@@ -325,7 +325,7 @@ class RLMAgentTest extends TestCase
     public function testGetCurrentContextIsNullWhenNotExecuting(): void
     {
         $agent = new RLMAgent($this->mockClient);
-        
+
         $this->assertNull($agent->getCurrentContext());
     }
 
@@ -333,9 +333,9 @@ class RLMAgentTest extends TestCase
     {
         $agent = new RLMAgent($this->mockClient);
         $context = new REPLContext('test input');
-        
+
         $result = $agent->resolveInputSource('full', $context);
-        
+
         $this->assertEquals('test input', $result);
     }
 
@@ -343,9 +343,9 @@ class RLMAgentTest extends TestCase
     {
         $agent = new RLMAgent($this->mockClient);
         $context = new REPLContext("Line 1\nLine 2\nLine 3");
-        
+
         $result = $agent->resolveInputSource('slice:2:3', $context);
-        
+
         $this->assertStringContainsString('Line 2', $result);
         $this->assertStringContainsString('Line 3', $result);
     }
@@ -355,9 +355,9 @@ class RLMAgentTest extends TestCase
         $agent = new RLMAgent($this->mockClient);
         $context = new REPLContext('original');
         $context->setVariable('extracted', 'stored value');
-        
+
         $result = $agent->resolveInputSource('variable:extracted', $context);
-        
+
         $this->assertEquals('stored value', $result);
     }
 
@@ -365,9 +365,9 @@ class RLMAgentTest extends TestCase
     {
         $agent = new RLMAgent($this->mockClient);
         $context = new REPLContext('test');
-        
+
         $result = $agent->resolveInputSource('invalid:format', $context);
-        
+
         $this->assertNull($result);
     }
 
@@ -389,7 +389,7 @@ class RLMAgentTest extends TestCase
         $result = $agent->runWithInput('Task', "Input with\nmultiple\nlines here");
 
         $metadata = $result->getMetadata();
-        
+
         $this->assertArrayHasKey('rlm', $metadata);
         $this->assertEquals(3, $metadata['rlm']['input_lines']);
         $this->assertGreaterThan(0, $metadata['rlm']['input_words']);
@@ -400,14 +400,14 @@ class RLMAgentTest extends TestCase
 
     public function testFluentInterface(): void
     {
-        $tool = Tool::create('test')->handler(fn (): string => 'result');
+        $tool = Tool::create('test')->handler(fn(): string => 'result');
 
         $agent = (new RLMAgent($this->mockClient))
             ->addTool($tool)
-            ->onIteration(fn () => null)
-            ->onToolExecution(fn () => null)
-            ->onRecursion(fn () => null)
-            ->onUpdate(fn () => null);
+            ->onIteration(fn() => null)
+            ->onToolExecution(fn() => null)
+            ->onRecursion(fn() => null)
+            ->onUpdate(fn() => null);
 
         $this->assertInstanceOf(RLMAgent::class, $agent);
     }
@@ -417,7 +417,7 @@ class RLMAgentTest extends TestCase
         $customTool = Tool::create('custom_analyzer')
             ->description('Custom analysis tool')
             ->stringParam('data', 'Data to analyze')
-            ->handler(fn (array $input): string => 'Analysis result');
+            ->handler(fn(array $input): string => 'Analysis result');
 
         // First response: use custom tool
         $toolUseResponse = $this->createMockMessage(

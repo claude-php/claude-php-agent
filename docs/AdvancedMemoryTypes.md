@@ -339,7 +339,7 @@ use ClaudeAgents\Memory\Summarizers\LLMSummarizer;
 $summarizer = new LLMSummarizer($client, [
     'max_tokens' => 500,
     'focus' => 'key_points',  // or 'entities', 'decisions', 'chronological'
-    'model' => 'claude-3-5-haiku-20241022',
+    'model' => 'claude-haiku-4-5',
 ]);
 
 $summary = $summarizer->summarize($messages, $existingSummary);
