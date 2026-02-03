@@ -47,6 +47,9 @@ function loadEnv($path) {
     return true;
 }
 
+// Require Composer autoloader
+require_once __DIR__ . '/../vendor/autoload.php';
+
 // Auto-load .env from parent directory if it exists
 $envPath = __DIR__ . '/../.env';
 loadEnv($envPath);

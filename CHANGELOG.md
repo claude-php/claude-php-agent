@@ -68,6 +68,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-02-03
+
+### Added - Agentic Module Architecture 🎉
+
+**Core Components:**
+- **CodeGenerationAgent:** AI-powered code generation with validation retry loops
+  - Natural language to PHP code generation
+  - Multi-stage validation with automatic retries (default: 3 attempts)
+  - Real-time progress tracking via callbacks
+  - Validated with real Claude API integration tests
+  
+- **Validation System:** Comprehensive code validation framework
+  - `ValidationCoordinator`: Orchestrates multiple validators with priority ordering
+  - `PHPSyntaxValidator`: PHP syntax checking via `php -l`
+  - `LLMReviewValidator`: Claude-based code quality review
+  - `StaticAnalysisValidator`: PHPStan/Psalm integration
+  - `CustomScriptValidator`: Execute custom validation scripts (PHPUnit, Pest, etc.)
+  - `ValidationResult`: Structured validation results with merging and serialization
+  
+- **SSE Streaming:** Server-Sent Events for real-time updates
+  - `SSEStreamAdapter`: Convert agent updates to SSE format
+  - `SSEServer`: Helper for SSE server setup and management
+  - Auto-flush, ping/keepalive, and comment support
+  - Integration with existing callback system
+
+- **Code Generation Utilities:**
+  - `ComponentResult`: Store generated code with validation status
+  - `ComponentTemplate`: Generate boilerplate (classes, interfaces, traits, services)
+  - `CodeFormatter`: Clean markdown, add line numbers, extract PHP code, statistics
+
+**Examples:**
+- `examples/code_generation_example.php`: Basic code generation with validation
+- `examples/validation_example.php`: Validation system demonstration
+- `examples/sse_streaming_example.php`: Real-time streaming endpoint
+- `examples/component_generator_example.php`: Template-based code generation
+
+**Tests:** (77 tests, 180 assertions - 100% passing)
+- 44 unit tests for core components
+- 28 feature tests for complete workflows
+- 5 integration tests with **real Claude API** (fully validated)
+
+**Documentation:**
+- `docs/agentic-module-architecture.md`: Complete architecture guide (450+ lines)
+- `docs/code-generation-guide.md`: Code generation usage guide (350+ lines)
+- `docs/validation-system.md`: Validation system guide (400+ lines)
+- `TEST_REPORT.md`: Comprehensive test coverage report
+- `TEST_SUMMARY.md`: Executive test summary
+- `INTEGRATION_TEST_RESULTS.md`: Real API validation results
+- `TESTING.md`: Testing guide and reference
+- `FINAL_TEST_VALIDATION.md`: Complete validation summary
+
+### Fixed
+- Code extraction now properly handles markdown code fences from Claude responses
+- Examples now include Composer autoloader for proper class loading
+
+### Changed
+- Enhanced `examples/load-env.php` with Composer autoloader support
+
+### Performance
+- Code generation: ~11 seconds per request (with Claude API)
+- Validation: ~0.1 seconds (PHP syntax check)
+- Memory usage: 10-12 MB
+
+### Statistics
+- New Code: 2,500+ lines
+- New Tests: 77 tests (44 unit, 28 feature, 5 integration)
+- New Documentation: 2,000+ lines
+- Components: 17 new classes and utilities
+
+### Inspiration
+This implementation was inspired by Langflow's AI-powered assistant, featuring:
+- Sophisticated code generation from natural language
+- Automatic validation with retry logic
+- Real-time streaming feedback via SSE
+
+## [0.5.0] - 2026-01-20
+
+### Added - RLM Agent
+
+**New Features:**
+- **RLMAgent:** Recursive Language Model agent for processing large inputs
+  - Based on MIT CSAIL research (arXiv:2512.24601v1)
+  - Process inputs 10-100x larger than context window
+  - REPL environment with variable storage
+  - Built-in tools: peek_input, slice_input, search_input, get_input_info
+  - Recursive self-invocation with depth limiting
+  - Token-efficient examination of large datasets
+
+**Documentation:**
+- Complete RLMAgent documentation with examples
+- Example script demonstrating log file analysis
+
+**Tests:**
+- 72 new unit tests for RLMAgent and components
+
 ## [0.4.0] - 2025-12-17
 
 ### Added - ML Framework 100% Complete 🎉
