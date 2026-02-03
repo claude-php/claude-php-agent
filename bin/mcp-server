@@ -1,0 +1,141 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * MCP Server Entry Point
+ * 
+ * This script starts the Model Context Protocol server for claude-php-agent.
+ * It can be used with Claude Desktop and other MCP clients.
+ * 
+ * Usage:
+ *   php bin/mcp-server                    # Start with STDIO transport (default)
+ *   php bin/mcp-server --transport=sse    # Start with SSE transport
+ *   php bin/mcp-server --help             # Show help
+ */
+
+// Find autoloader
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Error: Composer autoloader not found. Run 'composer install' first.\n");
+    exit(1);
+}
+
+use ClaudeAgents\MCP\MCPServer;
+use ClaudeAgents\MCP\Config\MCPServerConfig;
+use ClaudePhp\ClaudePhp;
+
+// Parse command line arguments
+$options = getopt('h', ['help', 'transport:', 'port:', 'debug']);
+
+if (isset($options['h']) || isset($options['help'])) {
+    echo <<<HELP
+MCP Server for Claude PHP Agent Framework
+
+Usage:
+  php bin/mcp-server [options]
+
+Options:
+  --transport=<type>    Transport protocol: stdio (default) or sse
+  --port=<port>         Port for SSE transport (default: 8080)
+  --debug               Enable debug logging
+  -h, --help            Show this help message
+
+Examples:
+  # Start with STDIO transport for Claude Desktop
+  php bin/mcp-server
+
+  # Start with SSE transport on port 8080
+  php bin/mcp-server --transport=sse --port=8080
+
+Claude Desktop Configuration:
+  Add this to your Claude Desktop config:
+  {
+    "mcpServers": {
+      "claude-php-agent": {
+        "command": "php",
+        "args": ["/path/to/claude-php-agent/bin/mcp-server"]
+      }
+    }
+  }
+
+HELP;
+    exit(0);
+}
+
+// Get configuration from environment and command line
+$transport = $options['transport'] ?? 'stdio';
+$port = isset($options['port']) ? (int)$options['port'] : 8080;
+$debug = isset($options['debug']);
+
+// Load API key from environment
+$apiKey = getenv('ANTHROPIC_API_KEY');
+if (!$apiKey) {
+    fwrite(STDERR, "Error: ANTHROPIC_API_KEY environment variable not set.\n");
+    fwrite(STDERR, "Please set it with: export ANTHROPIC_API_KEY=your_api_key\n");
+    exit(1);
+}
+
+try {
+    // Create Claude client
+    $client = new ClaudePhp(apiKey: $apiKey);
+    
+    // Create server configuration
+    $config = new MCPServerConfig(
+        serverName: 'claude-php-agent',
+        serverVersion: '1.0.0',
+        description: 'MCP server for Claude PHP Agent framework',
+        transport: $transport,
+        ssePort: $port,
+        enableLogging: $debug,
+    );
+    
+    // Log startup info to STDERR (STDOUT is reserved for MCP protocol)
+    fwrite(STDERR, "Starting MCP server...\n");
+    fwrite(STDERR, "Transport: {$transport}\n");
+    if ($transport === 'sse') {
+        fwrite(STDERR, "Port: {$port}\n");
+    }
+    fwrite(STDERR, "Debug: " . ($debug ? 'enabled' : 'disabled') . "\n");
+    fwrite(STDERR, "Ready for connections.\n\n");
+    
+    // Create and start server
+    $server = new MCPServer($client, $config);
+    
+    // Setup signal handlers for graceful shutdown
+    if (function_exists('pcntl_signal')) {
+        pcntl_signal(SIGINT, function() use ($server) {
+            fwrite(STDERR, "\nReceived shutdown signal. Cleaning up...\n");
+            $server->shutdown();
+            exit(0);
+        });
+        
+        pcntl_signal(SIGTERM, function() use ($server) {
+            fwrite(STDERR, "\nReceived termination signal. Cleaning up...\n");
+            $server->shutdown();
+            exit(0);
+        });
+    }
+    
+    // Start the server (blocking)
+    $server->start();
+    
+} catch (\Exception $e) {
+    fwrite(STDERR, "Fatal error: {$e->getMessage()}\n");
+    fwrite(STDERR, $e->getTraceAsString() . "\n");
+    exit(1);
+}

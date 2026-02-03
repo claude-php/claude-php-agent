@@ -21,6 +21,7 @@ A powerful PHP framework for building AI agents with Claude, featuring ReAct loo
 - 🔗 **Chain Composition** - Sequential, parallel, and conditional chain execution
 - ⚡ **Production Ready** - Retry logic, error handling, logging, and monitoring
 - 🚀 **Async/Concurrent** - AMPHP-powered parallel execution for batch operations
+- 🌐 **MCP Server** - Model Context Protocol integration for Claude Desktop and IDEs
 - 🎯 **Extensible** - Build custom agents and patterns with ease
 
 ## Installation
@@ -73,6 +74,49 @@ $agent = Agent::create($client)
         // $update->getType() and $update->getData() are structured and stable.
     });
 ```
+
+## MCP Server Integration
+
+The framework includes a full **Model Context Protocol (MCP)** server that exposes agent capabilities to MCP clients like **Claude Desktop**, IDEs, and other AI tools.
+
+### Quick Start
+
+```bash
+# 1. Set your API key
+export ANTHROPIC_API_KEY=your_api_key_here
+
+# 2. Start the MCP server
+php bin/mcp-server
+
+# 3. Add to Claude Desktop config
+{
+  "mcpServers": {
+    "claude-php-agent": {
+      "command": "php",
+      "args": ["/path/to/claude-php-agent/bin/mcp-server"]
+    }
+  }
+}
+```
+
+### Features
+
+- **15 MCP Tools** - Agent discovery, execution, visualization, and configuration
+- **Dual Transport** - STDIO for Claude Desktop, SSE for web clients
+- **Agent Discovery** - Search and explore 16+ agent types
+- **Workflow Visualization** - ASCII art diagrams and JSON graphs
+- **Real-time Execution** - Run agents directly through MCP
+- **Session Management** - Isolated per-client sessions with memory
+
+### Available Tools
+
+**Agent Discovery:** `search_agents`, `list_agent_types`, `get_agent_details`, `count_agents`  
+**Execution:** `run_agent`, `get_execution_status`  
+**Tool Management:** `list_tools`, `search_tools`, `get_tool_details`  
+**Visualization:** `visualize_workflow`, `get_agent_graph`, `export_agent_config`  
+**Configuration:** `update_agent_config`, `create_agent_instance`, `validate_agent_config`
+
+📚 **[Full MCP Documentation](docs/mcp-server-integration.md)**
 
 ## Core Concepts
 
