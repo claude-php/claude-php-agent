@@ -8,6 +8,12 @@ Welcome to the comprehensive tutorial collection for the Claude PHP Agent Framew
 
 **New to the framework?** Start here:
 
+0. **[Service Layer Getting Started](./Services_GettingStarted.md)** ⭐ **NEW: INFRASTRUCTURE**
+   - **Best for**: Production applications needing enterprise features
+   - **Learn**: Service management, dependency injection, configuration
+   - **Time**: 30 minutes
+   - **Difficulty**: Beginner-friendly
+
 1. **[Adaptive Agent Service Tutorial](./AdaptiveAgentService_Tutorial.md)** ⭐ **RECOMMENDED START**
    - **Best for**: Everyone - automatic agent selection
    - **Learn**: Intelligent routing, quality validation, adaptive retry
@@ -90,6 +96,46 @@ Explore sophisticated agent behaviors:
     - **Time**: 40 minutes
     - **Difficulty**: Intermediate
 
+### 🆕 New Features (v0.7.0 - v0.8.0)
+
+Recent additions to the framework:
+
+12. **[Component Validation Tutorial](./ComponentValidation_Tutorial.md)**
+    - **Best for**: Runtime component validation by instantiation
+    - **Learn**: Dynamic class loading, constructor validation, comprehensive error handling
+    - **Time**: 45 minutes
+    - **Difficulty**: Intermediate
+
+13. **[Services System Tutorial](./ServicesSystem_Tutorial.md)**
+    - **Best for**: Enterprise service management with dependency injection
+    - **Learn**: ServiceManager, custom services, lifecycle management
+    - **Time**: 50 minutes
+    - **Difficulty**: Intermediate
+
+14. **[MCP Server Tutorial](./MCPServer_Tutorial.md)**
+    - **Best for**: Model Context Protocol integration with Claude Desktop
+    - **Learn**: MCP tools, agent discovery, custom tools, SSE transport
+    - **Time**: 55 minutes
+    - **Difficulty**: Advanced
+
+15. **[Code Generation Tutorial](./CodeGeneration_Tutorial.md)**
+    - **Best for**: AI-powered code generation with validation
+    - **Learn**: CodeGenerationAgent, validation pipelines, retry logic, templates
+    - **Time**: 50 minutes
+    - **Difficulty**: Intermediate
+
+16. **[Production Patterns Tutorial](./ProductionPatterns_Tutorial.md)**
+    - **Best for**: Production-ready deployment and operations
+    - **Learn**: Error handling, logging, observability, caching, security, monitoring
+    - **Time**: 60 minutes
+    - **Difficulty**: Advanced
+
+17. **[Testing Strategies Tutorial](./TestingStrategies_Tutorial.md)**
+    - **Best for**: Comprehensive testing approaches
+    - **Learn**: Unit tests, feature tests, integration tests, mocking, coverage
+    - **Time**: 55 minutes
+    - **Difficulty**: Intermediate
+
 ---
 
 ## 🗺️ Learning Paths
@@ -106,6 +152,22 @@ Choose a path based on your goals:
 
 **Time**: ~2.5 hours  
 **Outcome**: Working chatbot with intelligent routing
+
+---
+
+### Path 6: New Features Mastery
+
+**Goal**: Master the latest framework capabilities (v0.7.0 - v0.8.0)
+
+1. ✅ [Component Validation](./ComponentValidation_Tutorial.md) - Runtime validation
+2. ✅ [Services System](./ServicesSystem_Tutorial.md) - Enterprise services
+3. ✅ [MCP Server](./MCPServer_Tutorial.md) - Claude Desktop integration
+4. ✅ [Code Generation](./CodeGeneration_Tutorial.md) - AI code generation
+5. ✅ [Production Patterns](./ProductionPatterns_Tutorial.md) - Production deployment
+6. ✅ [Testing Strategies](./TestingStrategies_Tutorial.md) - Comprehensive testing
+
+**Time**: ~5.5 hours  
+**Outcome**: Production-ready AI systems with latest features
 
 ---
 
@@ -202,6 +264,12 @@ Each tutorial follows a consistent structure:
 | **Multi-agent coordination** | [Coordinator Agent](./CoordinatorAgent_Tutorial.md) | Advanced |
 | **Task management** | [Task Prioritization](./TaskPrioritizationAgent_Tutorial.md) | Advanced |
 | **Adaptive systems** | [Learning Agent](./LearningAgent_Tutorial.md) | Advanced |
+| **Component validation** | [Component Validation](./ComponentValidation_Tutorial.md) | Intermediate |
+| **Service management** | [Services System](./ServicesSystem_Tutorial.md) | Intermediate |
+| **Claude Desktop integration** | [MCP Server](./MCPServer_Tutorial.md) | Advanced |
+| **AI code generation** | [Code Generation](./CodeGeneration_Tutorial.md) | Intermediate |
+| **Production deployment** | [Production Patterns](./ProductionPatterns_Tutorial.md) | Advanced |
+| **Testing strategies** | [Testing Strategies](./TestingStrategies_Tutorial.md) | Intermediate |
 
 ### By Complexity
 
@@ -459,6 +527,13 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
 | Tutorial | Status | Date Completed | Notes |
 |----------|--------|----------------|-------|
+| **Service Layer** | | | |
+| Service Layer Getting Started | ⬜ | | |
+| CacheService | ⬜ | | |
+| VariableService | ⬜ | | |
+| TracingService | ⬜ | | |
+| Service Best Practices | ⬜ | | |
+| **Agent Patterns** | | | |
 | Adaptive Agent Service | ⬜ | | |
 | Chain of Thought | ⬜ | | |
 | Dialog Agent | ⬜ | | |
@@ -470,6 +545,13 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 | Coordinator Agent | ⬜ | | |
 | Task Prioritization | ⬜ | | |
 | Learning Agent | ⬜ | | |
+| **New Features (v0.7.0-v0.8.0)** | | | |
+| Component Validation | ⬜ | | **v0.8.0** |
+| Services System | ⬜ | | **v0.7.0** |
+| MCP Server | ⬜ | | **v0.7.0** |
+| Code Generation | ⬜ | | **v0.8.0** |
+| Production Patterns | ⬜ | | **v0.8.0** |
+| Testing Strategies | ⬜ | | **v0.8.0** |
 
 ---
 
@@ -487,6 +569,25 @@ This tutorial gives you:
 
 ---
 
-*Last Updated: December 2025*  
-*Framework Version: 2.0+*
+## 🎁 What's New in v0.8.0
+
+The latest release includes 6 new tutorials covering cutting-edge features:
+
+- **Component Validation** - Validate components at runtime by instantiation
+- **Services System** - Enterprise-grade service management
+- **MCP Server Integration** - Connect to Claude Desktop and IDEs
+- **Code Generation** - AI-powered code generation with validation
+- **Production Patterns** - Deploy agents in production environments
+- **Testing Strategies** - Comprehensive testing approaches
+
+Each tutorial includes:
+- 7 progressive examples in `examples/tutorials/`
+- Runnable code snippets
+- Production-ready patterns
+- Integration with existing features
+
+---
+
+*Last Updated: February 2026*  
+*Framework Version: v0.8.0+*
 

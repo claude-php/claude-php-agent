@@ -23,6 +23,9 @@ A powerful PHP framework for building AI agents with Claude, featuring ReAct loo
 - 🚀 **Async/Concurrent** - AMPHP-powered parallel execution for batch operations
 - 🌐 **MCP Server** - Model Context Protocol integration for Claude Desktop and IDEs
 - 🎯 **Extensible** - Build custom agents and patterns with ease
+- 🆕 **Component Validation** - Runtime validation by instantiation (v0.8.0)
+- 🏢 **Services System** - Enterprise service management with dependency injection (v0.7.0)
+- 🧪 **Code Generation** - AI-powered code generation with validation pipelines (v0.8.0)
 
 ## Installation
 
@@ -510,8 +513,9 @@ See [Parsers Documentation](docs/Parsers.md) for complete guide.
 
 ## Examples
 
-See the [examples](./examples) directory for 70+ complete working examples including:
+See the [examples](./examples) directory for 110+ complete working examples including:
 
+**Core Examples (70+ files):**
 - Basic ReAct agents and multi-tool usage
 - Hierarchical agent systems (master-worker pattern)
 - Reflection agents for self-improvement
@@ -521,7 +525,16 @@ See the [examples](./examples) directory for 70+ complete working examples inclu
 - MAKER framework for million-step reliable tasks
 - Output parsers for structured data extraction
 - Chain composition patterns
-- And many more!
+
+**🆕 Tutorial Examples (42 files in `examples/tutorials/`):**
+- Component validation patterns (7 examples)
+- Services system usage (7 examples)
+- MCP server integration (7 examples)
+- Code generation workflows (7 examples)
+- Production deployment patterns (7 examples)
+- Testing strategies (7 examples)
+
+> 💡 All tutorial examples are fully runnable: `php examples/tutorials/component-validation/01-basic-validation.php`
 
 ## Documentation
 
@@ -537,14 +550,31 @@ New to AI agents? Start with our comprehensive tutorial series:
   - [Tutorial 4: Production-Ready Patterns](docs/tutorials/getting-started/04-Production-Patterns.md)
   - [Tutorial 5: Advanced Patterns](docs/tutorials/getting-started/05-Advanced-Patterns.md)
 
+### 🆕 New Features Tutorials (v0.7.0 - v0.8.0)
+
+Master the latest framework capabilities:
+
+- **[🔍 Component Validation](docs/tutorials/ComponentValidation_Tutorial.md)** - Runtime validation by instantiation (45min)
+- **[🏢 Services System](docs/tutorials/ServicesSystem_Tutorial.md)** - Enterprise service management (50min)
+- **[🌐 MCP Server Integration](docs/tutorials/MCPServer_Tutorial.md)** - Connect to Claude Desktop (55min)
+- **[🧪 Code Generation](docs/tutorials/CodeGeneration_Tutorial.md)** - AI-powered code generation (50min)
+- **[🚀 Production Patterns](docs/tutorials/ProductionPatterns_Tutorial.md)** - Production deployment (60min)
+- **[✅ Testing Strategies](docs/tutorials/TestingStrategies_Tutorial.md)** - Comprehensive testing (55min)
+
+> 💡 **42 runnable examples** included in `examples/tutorials/` - Each tutorial comes with 7 working code samples!
+
 ### 📖 Complete Documentation
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
 - **[Documentation Index](docs/README.md)** - Complete guide to all features
+- **[All Tutorials](docs/tutorials/README.md)** - 17+ comprehensive tutorials with examples
 - **[Loop Strategies](docs/loop-strategies.md)** - Understanding agent loops
 - **[Agent Selection Guide](docs/agent-selection-guide.md)** - Choose the right pattern
 - **[Best Practices Guide](docs/BestPractices.md)** - Production-ready patterns
-- **[Examples](examples/)** - 70+ working code examples
+- **[MCP Server Integration](docs/mcp-server-integration.md)** - Claude Desktop connectivity
+- **[Component Validation](docs/component-validation-service.md)** - Runtime validation guide
+- **[Services System](docs/services/README.md)** - Enterprise service management
+- **[Examples](examples/)** - 70+ working code examples + 42 tutorial examples
 
 ## Requirements
 
@@ -577,6 +607,22 @@ We welcome contributions! Please see:
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+## What's New
+
+### v0.8.0 (Latest)
+- ✨ **Component Validation Service** - Runtime validation by instantiation
+- ✨ **Code Generation Agent** - AI-powered code generation with validation
+- 📚 New tutorials: Component Validation, Code Generation, Production Patterns, Testing Strategies
+- 📝 42 new tutorial examples in `examples/tutorials/`
+
+### v0.7.0
+- ✨ **Services System** - Enterprise service management with dependency injection
+- ✨ **MCP Server** - Model Context Protocol integration for Claude Desktop
+- 📚 New tutorials: Services System, MCP Server Integration
+- 🔧 Enhanced observability and monitoring
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Acknowledgments
 

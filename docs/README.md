@@ -59,6 +59,13 @@ Welcome to the Claude PHP Agent Framework documentation!
 
 ### Core Systems
 
+#### 🆕 New Features (v0.7.0 - v0.8.0)
+- [MCP Server Integration](mcp-server-integration.md) - Model Context Protocol for Claude Desktop
+- [Component Validation Service](component-validation-service.md) - Runtime validation by instantiation
+- [Code Generation Guide](code-generation-guide.md) - AI-powered code generation with validation
+- [Services System](services/README.md) - Enterprise service management with dependency injection
+- [Validation System](validation-system.md) - Comprehensive validation framework
+
 #### Design Patterns
 - [Design Patterns Overview](DesignPatterns.md) - Production-ready patterns
 - [Factory Pattern](Factory.md) - Consistent agent creation
@@ -95,7 +102,9 @@ Welcome to the Claude PHP Agent Framework documentation!
 
 ## 🎓 Tutorials
 
-Step-by-step tutorials for learning the framework:
+📚 **[Complete Tutorial Index](tutorials/README.md)** - Browse all 36+ tutorials with learning paths
+
+### Agent Patterns Tutorials
 
 1. [Adaptive Agent Service](tutorials/AdaptiveAgentService_Tutorial.md)
 2. [Alert Agent](tutorials/AlertAgent_Tutorial.md)
@@ -128,10 +137,22 @@ Step-by-step tutorials for learning the framework:
 29. [Utility-Based Agent](tutorials/UtilityBasedAgent_Tutorial.md)
 30. [Worker Agent](tutorials/WorkerAgent_Tutorial.md)
 
+### 🆕 New Features Tutorials (v0.7.0 - v0.8.0)
+
+31. **[Component Validation](tutorials/ComponentValidation_Tutorial.md)** - Runtime validation by instantiation (45min)
+32. **[Services System](tutorials/ServicesSystem_Tutorial.md)** - Enterprise service management (50min)
+33. **[MCP Server Integration](tutorials/MCPServer_Tutorial.md)** - Claude Desktop connectivity (55min)
+34. **[Code Generation](tutorials/CodeGeneration_Tutorial.md)** - AI-powered code generation (50min)
+35. **[Production Patterns](tutorials/ProductionPatterns_Tutorial.md)** - Production deployment (60min)
+36. **[Testing Strategies](tutorials/TestingStrategies_Tutorial.md)** - Comprehensive testing (55min)
+
+> 💡 **42 runnable examples** included in `examples/tutorials/` - Each new tutorial comes with 7 working code samples!
+
 ## 📖 Examples
 
-Check the [examples](../examples/) directory for complete working examples:
+Check the [examples](../examples/) directory for 110+ complete working examples:
 
+**Core Examples (70+ files):**
 - Basic agent usage
 - Multi-tool agents
 - Hierarchical systems
@@ -139,7 +160,18 @@ Check the [examples](../examples/) directory for complete working examples:
 - Async/parallel execution
 - Output parsing
 - Chain composition
-- And 60+ more!
+- MAKER agent demonstrations
+- Adaptive agent service
+
+**🆕 Tutorial Examples (42 files in `examples/tutorials/`):**
+- Component validation patterns (7 examples)
+- Services system usage (7 examples)
+- MCP server integration (7 examples)
+- Code generation workflows (7 examples)
+- Production deployment (7 examples)
+- Testing strategies (7 examples)
+
+Run any example: `php examples/tutorials/component-validation/01-basic-validation.php`
 
 ## 🔍 Quick Navigation
 
@@ -166,11 +198,29 @@ Check the [examples](../examples/) directory for complete working examples:
 **Don't Know Which Agent?**
 → Use [Adaptive Agent Service](adaptive-agent-service.md)
 
+**Component Validation?**
+→ Check [Component Validation Service](component-validation-service.md)
+
+**Enterprise Services?**
+→ See [Services System](services/README.md)
+
+**Claude Desktop Integration?**
+→ Use [MCP Server](mcp-server-integration.md)
+
+**AI Code Generation?**
+→ Read [Code Generation Guide](code-generation-guide.md)
+
+**Production Deployment?**
+→ Follow [Production Patterns Tutorial](tutorials/ProductionPatterns_Tutorial.md)
+
+**Testing Strategies?**
+→ Learn from [Testing Strategies Tutorial](tutorials/TestingStrategies_Tutorial.md)
+
 ### By Complexity
 
 - **Beginner**: ReAct, Reflex, Dialog
-- **Intermediate**: Plan-Execute, Reflection, Hierarchical
-- **Advanced**: Multi-Agent, MAKER, Coordinator, Adaptive Service
+- **Intermediate**: Plan-Execute, Reflection, Hierarchical, Component Validation, Services
+- **Advanced**: Multi-Agent, MAKER, Coordinator, Adaptive Service, MCP Server, Code Generation
 
 ## 🤝 Contributing
 
@@ -207,6 +257,24 @@ Documentation should include:
 - **Bugs**: Report in the issue tracker
 - **Security**: See [SECURITY.md](../SECURITY.md)
 
+## 🎁 What's New
+
+### v0.8.0 (Latest)
+- ✨ **Component Validation Service** - Runtime validation by instantiation
+- ✨ **Code Generation Agent** - AI-powered code generation with validation pipelines
+- 📚 New tutorials: Component Validation, Code Generation, Production Patterns, Testing Strategies
+- 📝 42 new tutorial examples in `examples/tutorials/`
+- 📖 Enhanced documentation with step-by-step guides
+
+### v0.7.0
+- ✨ **Services System** - Enterprise service management with dependency injection
+- ✨ **MCP Server** - Model Context Protocol integration for Claude Desktop and IDEs
+- 📚 New tutorials: Services System, MCP Server Integration
+- 🔧 Enhanced observability and monitoring capabilities
+- 📖 Comprehensive service layer documentation
+
+See [CHANGELOG.md](../CHANGELOG.md) for complete version history.
+
 ## 📜 License
 
 The documentation is part of the Claude PHP Agent Framework and is licensed under the [MIT License](../LICENSE).
@@ -214,4 +282,6 @@ The documentation is part of the Claude PHP Agent Framework and is licensed unde
 ---
 
 **Tip**: Use the search function (Ctrl/Cmd + F) to quickly find what you're looking for!
+
+**New to the framework?** Start with the [Tutorial Index](tutorials/README.md) to find the perfect learning path!
 
