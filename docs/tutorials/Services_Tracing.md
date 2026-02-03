@@ -59,7 +59,7 @@ $tracing = $manager->get(ServiceType::TRACING);
 // Start a trace
 $tracing->startTrace('trace-123', 'agent-run', [
     'user_id' => 'user-123',
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 
 // Your agent code here...
@@ -160,7 +160,7 @@ $traceId = uniqid('trace_', true);
 $tracing->startTrace($traceId, 'user-query', [
     'user_id' => 'user-123',
     'query' => 'What is the weather?',
-    'model' => 'claude-3-sonnet',
+    'model' => 'claude-sonnet-4-5',
 ]);
 
 try {
@@ -251,15 +251,15 @@ $tracing->endTrace('trace-123', ['status' => 'complete']);
 ```php
 // Record individual metrics
 $tracing->recordMetric('llm.tokens.input', 100, [
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 
 $tracing->recordMetric('llm.tokens.output', 50, [
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 
 $tracing->recordMetric('llm.latency.ms', 1250.5, [
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 ```
 
@@ -434,7 +434,7 @@ $tracing->startTrace('trace-1', 'customer-support-query', [
 // ✅ Good metadata
 $tracing->startTrace($id, 'agent-run', [
     'user_id' => $userId,
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
     'temperature' => 0.7,
     'max_tokens' => 1000,
     'language' => 'en',

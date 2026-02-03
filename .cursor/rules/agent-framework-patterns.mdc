@@ -1,0 +1,776 @@
+# Agent Framework Patterns
+
+Framework-specific patterns for agents, tools, loops, and agentic workflows.
+
+## Overview
+
+This framework implements agentic AI patterns with Claude. Understanding these patterns is essential for building effective autonomous agents.
+
+## Agent Patterns
+
+### Agent Interface
+
+All agents must implement `AgentInterface`:
+
+```php
+namespace ClaudeAgents\Contracts;
+
+interface AgentInterface
+{
+    /**
+     * Execute the agent with the given input.
+     */
+    public function run(string $input): AgentResult;
+    
+    /**
+     * Get the agent's name.
+     */
+    public function getName(): string;
+}
+```
+
+### Creating Agents
+
+#### Method 1: Agent Builder (Recommended)
+
+```php
+// ✅ Correct - Fluent builder API
+use ClaudeAgents\Agent;
+
+$agent = Agent::create($client)
+    ->withTool($calculatorTool)
+    ->withTool($searchTool)
+    ->withSystemPrompt('You are a helpful assistant.')
+    ->withMemory($memory)
+    ->maxIterations(10)
+    ->onUpdate(function ($update) {
+        echo "Progress: {$update->getType()}\n";
+    });
+
+$result = $agent->run('What is 25 * 17?');
+```
+
+#### Method 2: Specific Agent Classes
+
+```php
+// ✅ Correct - Using specific agent types
+use ClaudeAgents\Agents\ReactAgent;
+use ClaudeAgents\Agents\ReflectionAgent;
+
+$reactAgent = new ReactAgent($client, [
+    'tools' => [$tool1, $tool2],
+    'max_iterations' => 10,
+    'system' => 'You are helpful.',
+]);
+
+$reflectionAgent = new ReflectionAgent($client, [
+    'max_refinements' => 3,
+    'quality_threshold' => 8,
+]);
+```
+
+### Agent Types and Use Cases
+
+| Agent Type | Pattern | Use Case |
+|------------|---------|----------|
+| `ReactAgent` | ReAct Loop | General autonomous tasks |
+| `PlanExecuteAgent` | Plan first, execute | Complex multi-step workflows |
+| `ReflectionAgent` | Generate, reflect, refine | High-quality outputs |
+| `HierarchicalAgent` | Master-worker | Multi-domain tasks |
+| `CodeGenerationAgent` | Generate + validate | Code generation |
+| `DialogAgent` | Conversational | Chat applications |
+| `MakerAgent` | Extreme decomposition | Million-step tasks |
+
+## Tool System
+
+### Tool Interface
+
+All tools must implement `ToolInterface`:
+
+```php
+namespace ClaudeAgents\Contracts;
+
+interface ToolInterface
+{
+    public function getName(): string;
+    public function getDescription(): string;
+    public function getInputSchema(): array;
+    public function execute(array $input): ToolResult;
+}
+```
+
+### Creating Tools
+
+#### Method 1: Fluent Tool Builder
+
+```php
+// ✅ Correct - Fluent builder
+use ClaudeAgents\Tools\Tool;
+
+$weatherTool = Tool::create('get_weather')
+    ->description('Get current weather for a location')
+    ->parameter('city', 'string', 'City name')
+    ->parameter('units', 'string', 'celsius or fahrenheit', false)
+    ->required('city')
+    ->handler(function (array $input): string {
+        $city = $input['city'];
+        $units = $input['units'] ?? 'celsius';
+        
+        // Call weather API
+        $data = getWeatherData($city);
+        
+        return json_encode([
+            'city' => $city,
+            'temperature' => $data['temp'],
+            'units' => $units,
+            'conditions' => $data['conditions'],
+        ]);
+    });
+```
+
+#### Method 2: Tool Class
+
+```php
+// ✅ Correct - Custom tool class
+namespace App\Tools;
+
+use ClaudeAgents\Contracts\ToolInterface;
+use ClaudeAgents\Tools\ToolResult;
+
+class WeatherTool implements ToolInterface
+{
+    public function getName(): string
+    {
+        return 'get_weather';
+    }
+    
+    public function getDescription(): string
+    {
+        return 'Get current weather for a location';
+    }
+    
+    public function getInputSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'city' => [
+                    'type' => 'string',
+                    'description' => 'City name',
+                ],
+                'units' => [
+                    'type' => 'string',
+                    'enum' => ['celsius', 'fahrenheit'],
+                    'description' => 'Temperature units',
+                ],
+            ],
+            'required' => ['city'],
+        ];
+    }
+    
+    public function execute(array $input): ToolResult
+    {
+        $data = $this->fetchWeather($input['city']);
+        
+        return ToolResult::success(json_encode($data));
+    }
+    
+    private function fetchWeather(string $city): array
+    {
+        // Implementation
+    }
+}
+```
+
+### Tool Best Practices
+
+1. **Single Responsibility**: Each tool does one thing well
+2. **Clear Descriptions**: Help the agent understand when to use the tool
+3. **Validate Input**: Check input in the handler
+4. **Error Handling**: Return descriptive errors
+5. **Idempotent**: Safe to call multiple times
+
+```php
+// ✅ Good tool handler
+->handler(function (array $input): string {
+    // Validate
+    if (empty($input['query'])) {
+        throw new \InvalidArgumentException('Query is required');
+    }
+    
+    try {
+        // Execute
+        $results = $this->search($input['query']);
+        
+        // Return clear result
+        return json_encode([
+            'success' => true,
+            'results' => $results,
+            'count' => count($results),
+        ]);
+    } catch (\Exception $e) {
+        // Handle errors
+        return json_encode([
+            'success' => false,
+            'error' => $e->getMessage(),
+        ]);
+    }
+})
+```
+
+## Loop Strategies
+
+### Loop Strategy Interface
+
+```php
+namespace ClaudeAgents\Contracts;
+
+interface LoopStrategyInterface
+{
+    public function execute(
+        Agent $agent,
+        string $input,
+        array $context = []
+    ): AgentResult;
+}
+```
+
+### Available Loop Strategies
+
+#### 1. ReactLoop (Default)
+
+Reason-Act-Observe pattern:
+
+```php
+use ClaudeAgents\Loops\ReactLoop;
+
+$agent = Agent::create($client)
+    ->withLoopStrategy(new ReactLoop())
+    ->withTools($tools);
+
+// Agent will:
+// 1. Think about the problem
+// 2. Choose and execute a tool
+// 3. Observe the result
+// 4. Repeat until done
+```
+
+#### 2. PlanExecuteLoop
+
+Plan first, then execute systematically:
+
+```php
+use ClaudeAgents\Loops\PlanExecuteLoop;
+
+$loop = new PlanExecuteLoop(
+    allowReplan: true  // Can replan if needed
+);
+
+$loop->onPlanCreated(function (array $steps) {
+    echo "Plan created with " . count($steps) . " steps\n";
+    foreach ($steps as $i => $step) {
+        echo ($i + 1) . ". {$step}\n";
+    }
+});
+
+$agent = Agent::create($client)
+    ->withLoopStrategy($loop)
+    ->withTools($tools);
+```
+
+#### 3. ReflectionLoop
+
+Generate, reflect on quality, refine:
+
+```php
+use ClaudeAgents\Loops\ReflectionLoop;
+
+$loop = new ReflectionLoop(
+    maxRefinements: 3,
+    qualityThreshold: 8  // 0-10 scale
+);
+
+$loop->onReflection(function (int $refinement, float $quality, string $feedback) {
+    echo "Refinement {$refinement}: Quality {$quality}/10\n";
+    echo "Feedback: {$feedback}\n";
+});
+
+$agent = Agent::create($client)
+    ->withLoopStrategy($loop);
+```
+
+#### 4. StreamingLoop
+
+Token-by-token streaming with events:
+
+```php
+use ClaudeAgents\Streaming\StreamingLoop;
+
+$loop = new StreamingLoop();
+
+$agent = Agent::create($client)
+    ->withLoopStrategy($loop)
+    ->onUpdate(function ($update) {
+        if ($update->isStreamingDelta()) {
+            echo $update->getData()['delta'];
+        }
+    });
+```
+
+### Custom Loop Strategy
+
+```php
+use ClaudeAgents\Contracts\LoopStrategyInterface;
+
+class CustomLoop implements LoopStrategyInterface
+{
+    public function execute(
+        Agent $agent,
+        string $input,
+        array $context = []
+    ): AgentResult {
+        // Your custom loop logic
+        $iterations = 0;
+        $messages = [];
+        
+        while ($iterations < $agent->getMaxIterations()) {
+            // Your reasoning/action logic
+            $response = $this->step($agent, $input, $messages);
+            
+            if ($this->isComplete($response)) {
+                break;
+            }
+            
+            $iterations++;
+        }
+        
+        return new AgentResult(
+            answer: $this->extractAnswer($messages),
+            iterations: $iterations,
+            messages: $messages
+        );
+    }
+}
+```
+
+## Progress Callbacks
+
+### onUpdate() - Unified Progress
+
+Single callback for all progress events:
+
+```php
+use ClaudeAgents\Progress\AgentUpdate;
+
+$agent = Agent::create($client)
+    ->onUpdate(function (AgentUpdate $update): void {
+        match ($update->getType()) {
+            'started' => echo "🚀 Agent started\n",
+            'iteration' => echo "🔄 Iteration {$update->getData()['iteration']}\n",
+            'tool_execution' => echo "🔧 Tool: {$update->getData()['tool']}\n",
+            'streaming_delta' => print($update->getData()['delta']),
+            'completed' => echo "✅ Completed\n",
+            default => null
+        };
+    });
+```
+
+### Legacy Callbacks (Still Supported)
+
+```php
+// Specific callbacks
+$agent
+    ->onIteration(function (int $iteration, array $context) {
+        echo "Iteration: {$iteration}\n";
+    })
+    ->onToolExecution(function (string $tool, array $input, ToolResult $result) {
+        echo "Tool {$tool} executed\n";
+    })
+    ->onError(function (Throwable $e, int $attempt) {
+        echo "Error on attempt {$attempt}: {$e->getMessage()}\n";
+    });
+```
+
+## Streaming Flow Execution
+
+### New Event-Driven Streaming (v0.8+)
+
+Use `StreamingFlowExecutor` for modern event-driven streaming:
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\ServiceType;
+
+// Get executor from ServiceManager
+$executor = ServiceManager::getInstance()->get(ServiceType::FLOW_EXECUTOR);
+
+// Stream with events
+foreach ($executor->executeWithStreaming($agent, $task) as $event) {
+    $type = $event['type'];
+    $data = $event['data'];
+    
+    match ($type) {
+        'flow_started' => echo "🚀 Started\n",
+        'token' => print($data['token']),
+        'tool_start' => echo "\n🔧 {$data['tool']}\n",
+        'progress' => printf("%.1f%%\n", $data['progress_percent']),
+        'end' => echo "\n✅ Done\n",
+        default => null
+    };
+}
+```
+
+### Event Types
+
+Available event types:
+- `flow_started` / `flow_completed` / `flow_failed`
+- `token` - Individual token streaming
+- `iteration_start` / `iteration_end`
+- `tool_start` / `tool_end` / `tool_failed`
+- `progress` - Progress updates
+- `error` - Error events
+
+### Multiple Listeners
+
+```php
+$eventManager = ServiceManager::getInstance()->get(ServiceType::EVENT_MANAGER);
+
+// Listener 1: Token counter
+$eventManager->subscribe(function ($event) {
+    if ($event->isToken()) {
+        incrementTokenCount();
+    }
+});
+
+// Listener 2: Progress logger
+$eventManager->subscribe(function ($event) {
+    if ($event->isProgress()) {
+        logProgress($event->data['percent']);
+    }
+});
+```
+
+## Memory Management
+
+### Using Memory with Agents
+
+```php
+use ClaudeAgents\Memory\Memory;
+use ClaudeAgents\Memory\FileMemory;
+
+// In-memory (resets between runs)
+$memory = new Memory();
+
+// Persistent file-based memory
+$memory = new FileMemory('storage/agent_memory.json');
+
+// Attach to agent
+$agent = Agent::create($client)
+    ->withMemory($memory);
+
+// Memory is automatically saved/loaded across runs
+$result1 = $agent->run('Remember my name is John');
+$result2 = $agent->run('What is my name?');  // Uses memory
+```
+
+### Custom Memory
+
+```php
+use ClaudeAgents\Contracts\MemoryInterface;
+
+class RedisMemory implements MemoryInterface
+{
+    public function get(string $key): mixed
+    {
+        return $this->redis->get($key);
+    }
+    
+    public function set(string $key, mixed $value): void
+    {
+        $this->redis->set($key, serialize($value));
+    }
+    
+    public function has(string $key): bool
+    {
+        return $this->redis->exists($key);
+    }
+    
+    public function clear(): void
+    {
+        $this->redis->flushdb();
+    }
+}
+```
+
+## Agent Configuration
+
+### AgentConfig Class
+
+```php
+use ClaudeAgents\Config\AgentConfig;
+
+$config = new AgentConfig(
+    model: 'claude-sonnet-4-5',
+    maxTokens: 4096,
+    maxIterations: 10,
+    temperature: 0.7,
+    systemPrompt: 'You are a helpful assistant.'
+);
+
+$agent = Agent::create($client)->withConfig($config);
+```
+
+### Config Builder
+
+```php
+use ClaudeAgents\Config\AgentConfigBuilder;
+
+$config = AgentConfigBuilder::create()
+    ->model('claude-sonnet-4-5')
+    ->maxTokens(4096)
+    ->maxIterations(10)
+    ->temperature(0.7)
+    ->systemPrompt('You are helpful.')
+    ->enableThinking()  // Extended thinking
+    ->withRetry(
+        maxAttempts: 3,
+        delayMs: 1000,
+        multiplier: 2
+    )
+    ->build();
+```
+
+## Result Handling
+
+### AgentResult Object
+
+```php
+$result = $agent->run('Your task');
+
+// Get answer
+$answer = $result->getAnswer();
+
+// Get metadata
+$iterations = $result->getIterations();
+$tokens = $result->getTotalTokens();
+$success = $result->isSuccessful();
+
+// Get messages (conversation history)
+$messages = $result->getMessages();
+
+// Get tool calls
+$toolCalls = $result->getToolCalls();
+
+// Get timing
+$duration = $result->getDuration();
+```
+
+## Error Handling Patterns
+
+### Graceful Degradation
+
+```php
+try {
+    $result = $agent->run($input);
+} catch (MaxIterationsException $e) {
+    // Agent couldn't complete in max iterations
+    $partialResult = $e->getPartialResult();
+    echo "Partial answer: {$partialResult->getAnswer()}\n";
+} catch (ToolExecutionException $e) {
+    // Tool failed
+    echo "Tool error: {$e->getMessage()}\n";
+} catch (AgentException $e) {
+    // General agent error
+    echo "Agent error: {$e->getMessage()}\n";
+}
+```
+
+### Retry with Backoff
+
+```php
+$agent = Agent::create($client)
+    ->withRetry(
+        maxAttempts: 3,
+        delayMs: 1000,
+        multiplier: 2  // Exponential backoff
+    )
+    ->onError(function (Throwable $e, int $attempt) {
+        echo "Attempt {$attempt} failed: {$e->getMessage()}\n";
+    });
+```
+
+## Multi-Agent Patterns
+
+### Hierarchical Agent
+
+```php
+use ClaudeAgents\Agents\HierarchicalAgent;
+use ClaudeAgents\Agents\WorkerAgent;
+
+$master = new HierarchicalAgent($client);
+
+// Register workers
+$master->registerWorker('researcher', new WorkerAgent($client, [
+    'specialty' => 'research and information gathering',
+]));
+
+$master->registerWorker('writer', new WorkerAgent($client, [
+    'specialty' => 'writing and content creation',
+]));
+
+// Master delegates to workers
+$result = $master->run('Research PHP 8 features and write a summary');
+```
+
+### Agent Collaboration
+
+```php
+use ClaudeAgents\MultiAgent\CollaborationManager;
+
+$manager = new CollaborationManager();
+
+$manager->addAgent('planner', $plannerAgent);
+$manager->addAgent('executor', $executorAgent);
+$manager->addAgent('reviewer', $reviewerAgent);
+
+$result = $manager->orchestrate('Complex task', [
+    'workflow' => 'sequential',  // or 'parallel'
+]);
+```
+
+## Best Practices
+
+### 1. Use Appropriate Loop Strategy
+
+```php
+// ✅ Good - Match strategy to task
+// Simple autonomous task -> ReactLoop
+$agent->withLoopStrategy(new ReactLoop());
+
+// Complex multi-step -> PlanExecuteLoop
+$agent->withLoopStrategy(new PlanExecuteLoop());
+
+// Quality critical -> ReflectionLoop
+$agent->withLoopStrategy(new ReflectionLoop(qualityThreshold: 8));
+```
+
+### 2. Set Reasonable Limits
+
+```php
+// ✅ Good - Set appropriate limits
+$agent
+    ->maxIterations(10)      // Prevent infinite loops
+    ->timeout(30)            // 30 second timeout
+    ->maxTokens(4096);       // Control costs
+```
+
+### 3. Provide Clear System Prompts
+
+```php
+// ✅ Good - Clear, specific prompt
+$agent->withSystemPrompt(
+    'You are a helpful coding assistant. ' .
+    'When writing code, always include error handling and comments. ' .
+    'Prefer modern PHP 8.1+ features.'
+);
+
+// ❌ Bad - Vague prompt
+$agent->withSystemPrompt('You are helpful.');
+```
+
+### 4. Use Progress Callbacks
+
+```php
+// ✅ Good - Monitor progress
+$agent->onUpdate(function ($update) {
+    logProgress($update);
+    sendToWebSocket($update);
+    updateUI($update);
+});
+```
+
+### 5. Handle Errors Gracefully
+
+```php
+// ✅ Good - Comprehensive error handling
+try {
+    $result = $agent->run($input);
+} catch (MaxIterationsException $e) {
+    return $this->handleTimeout($e);
+} catch (ToolExecutionException $e) {
+    return $this->handleToolError($e);
+} catch (AgentException $e) {
+    return $this->handleAgentError($e);
+}
+```
+
+## Common Patterns
+
+### Pattern: Calculator Agent
+
+```php
+$calculator = Tool::create('calculator')
+    ->description('Perform arithmetic calculations')
+    ->parameter('expression', 'string', 'Math expression')
+    ->handler(fn($input) => eval("return {$input['expression']};"));
+
+$agent = Agent::create($client)
+    ->withTool($calculator)
+    ->withSystemPrompt('Use the calculator tool for all math problems.');
+
+$result = $agent->run('What is 25 * 17 + 100?');
+```
+
+### Pattern: Search and Summarize
+
+```php
+$searchTool = Tool::create('search')
+    ->description('Search the web')
+    ->parameter('query', 'string')
+    ->handler(fn($input) => searchWeb($input['query']));
+
+$agent = Agent::create($client)
+    ->withTool($searchTool)
+    ->withSystemPrompt(
+        'Search for information and provide comprehensive summaries. ' .
+        'Always cite sources.'
+    );
+
+$result = $agent->run('What are the latest developments in AI?');
+```
+
+### Pattern: Code Review Agent
+
+```php
+use ClaudeAgents\Agents\ReflectionAgent;
+
+$reviewAgent = new ReflectionAgent($client, [
+    'max_refinements' => 2,
+    'quality_threshold' => 8,
+]);
+
+$reviewAgent->onReflection(function ($refinement, $quality, $feedback) {
+    echo "Review #{$refinement} - Quality: {$quality}/10\n";
+    echo "Feedback: {$feedback}\n";
+});
+
+$result = $reviewAgent->run("Review this code:\n\n{$code}");
+```
+
+## References
+
+- [Agent Selection Guide](../docs/agent-selection-guide.md)
+- [Loop Strategies](../docs/loop-strategies.md)
+- [Tools Documentation](../docs/Tools.md)
+- [Streaming Guide](../docs/execution/README.md)
+
+## Quick Reference
+
+| Task Type | Loop Strategy | Agent Type |
+|-----------|---------------|------------|
+| General autonomous | ReactLoop | ReactAgent |
+| Complex multi-step | PlanExecuteLoop | PlanExecuteAgent |
+| Quality critical | ReflectionLoop | ReflectionAgent |
+| Conversational | Default | DialogAgent |
+| Code generation | ReflectionLoop | CodeGenerationAgent |
+| Multi-domain | Custom | HierarchicalAgent |

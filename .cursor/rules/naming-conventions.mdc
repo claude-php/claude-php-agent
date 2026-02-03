@@ -1,0 +1,624 @@
+# Naming Conventions
+
+Standardized naming conventions for classes, methods, properties, files, and namespaces.
+
+## Overview
+
+Consistent naming improves code readability, maintainability, and reduces cognitive load. This project follows strict naming conventions across all code.
+
+## General Principles
+
+1. **Be Descriptive**: Names should clearly indicate purpose
+2. **Be Consistent**: Use the same patterns throughout
+3. **Avoid Abbreviations**: Use full words (except common ones like `id`, `url`, `api`)
+4. **Use English**: All names in English
+5. **Be Specific**: Prefer `executeReActLoop()` over `run()`
+
+## Classes
+
+### Naming Style: PascalCase
+
+```php
+// ✅ Correct
+class ReactAgent {}
+class ToolRegistry {}
+class AgentConfig {}
+class FlowEventManager {}
+
+// ❌ Incorrect
+class react_agent {}        // snake_case
+class toolRegistry {}       // camelCase
+class AGENT_CONFIG {}       // UPPER_CASE
+```
+
+### Class Suffixes
+
+Use specific suffixes to indicate class type:
+
+| Suffix | Purpose | Example |
+|--------|---------|---------|
+| `Agent` | Agent implementations | `ReactAgent`, `CodeGenerationAgent` |
+| `Service` | Services | `CacheService`, `TracingService` |
+| `Factory` | Factory classes | `AgentFactory`, `ServiceFactory` |
+| `Interface` | Interfaces | `AgentInterface`, `ToolInterface` |
+| `Exception` | Exceptions | `AgentException`, `ValidationException` |
+| `Config` | Configuration | `AgentConfig`, `MCPServerConfig` |
+| `Result` | Result objects | `AgentResult`, `ValidationResult` |
+| `Manager` | Coordinators | `ServiceManager`, `SessionManager` |
+| `Registry` | Registries | `ToolRegistry`, `AgentRegistry` |
+| `Builder` | Builders | `AgentConfigBuilder`, `PromptBuilder` |
+| `Handler` | Handlers | `ErrorHandler`, `CallbackHandler` |
+| `Validator` | Validators | `ComponentInstantiationValidator`, `PHPSyntaxValidator` |
+| `Parser` | Parsers | `JsonParser`, `XmlParser` |
+| `Tool` | Tools | `CalculatorTool`, `SearchTool` |
+| `Loop` | Loop strategies | `ReactLoop`, `PlanExecuteLoop` |
+
+### Examples
+
+```php
+// ✅ Correct - Clear suffixes
+namespace ClaudeAgents\Agents;
+class ReactAgent implements AgentInterface {}
+
+namespace ClaudeAgents\Services\Cache;
+class CacheService implements ServiceInterface {}
+
+namespace ClaudeAgents\Factory;
+class AgentFactory {}
+
+namespace ClaudeAgents\Exceptions;
+class AgentException extends Exception {}
+
+// ❌ Incorrect - Missing or wrong suffixes
+class React {}              // Should be ReactAgent
+class Cache {}              // Should be CacheService
+class AgentCreator {}       // Should be AgentFactory
+class AgentError {}         // Should be AgentException
+```
+
+## Interfaces
+
+### Naming: PascalCase with `Interface` suffix
+
+```php
+// ✅ Correct
+interface AgentInterface {}
+interface ToolInterface {}
+interface LoopStrategyInterface {}
+interface ServiceInterface {}
+interface ValidatorInterface {}
+
+// ❌ Incorrect
+interface IAgent {}              // Don't use I prefix
+interface AgentContract {}       // Use Interface suffix
+interface Agent {}               // Must have Interface suffix
+```
+
+### Placement
+
+```php
+// ✅ Correct - In Contracts namespace
+namespace ClaudeAgents\Contracts;
+
+interface AgentInterface
+{
+    public function run(string $input): AgentResult;
+}
+
+// Usage
+namespace ClaudeAgents\Agents;
+
+use ClaudeAgents\Contracts\AgentInterface;
+
+class ReactAgent implements AgentInterface {}
+```
+
+## Methods and Functions
+
+### Naming Style: camelCase
+
+```php
+// ✅ Correct
+public function executeAgent(): void {}
+public function withTool(ToolInterface $tool): self {}
+public function getMaxIterations(): int {}
+public function isComplete(): bool {}
+public function hasErrors(): bool {}
+
+// ❌ Incorrect
+public function ExecuteAgent(): void {}    // PascalCase
+public function execute_agent(): void {}   // snake_case
+public function get_max_iterations(): int {}
+```
+
+### Method Naming Patterns
+
+**Actions (Verbs)**:
+```php
+public function execute(): void {}
+public function create(): Agent {}
+public function register(ToolInterface $tool): void {}
+public function validate(): ValidationResult {}
+public function format(string $text): string {}
+```
+
+**Getters**:
+```php
+public function getName(): string {}
+public function getTools(): array {}
+public function getConfig(): AgentConfig {}
+```
+
+**Boolean Checks (is/has/can/should)**:
+```php
+public function isValid(): bool {}
+public function isComplete(): bool {}
+public function hasErrors(): bool {}
+public function canExecute(): bool {}
+public function shouldRetry(): bool {}
+```
+
+**Setters (Avoid - Use fluent setters)**:
+```php
+// ❌ Avoid traditional setters
+public function setName(string $name): void {}
+public function setMaxIterations(int $max): void {}
+
+// ✅ Prefer fluent setters (return $this)
+public function withName(string $name): self {}
+public function withMaxIterations(int $max): self {}
+```
+
+### Fluent API Pattern
+
+Use `with*` for fluent setters:
+
+```php
+// ✅ Correct - Fluent pattern
+class Agent
+{
+    public function withTool(ToolInterface $tool): self
+    {
+        $this->tools->register($tool);
+        return $this;
+    }
+    
+    public function withSystemPrompt(string $prompt): self
+    {
+        $this->systemPrompt = $prompt;
+        return $this;
+    }
+}
+
+// Usage
+$agent = Agent::create($client)
+    ->withTool($calculator)
+    ->withSystemPrompt('You are helpful');
+```
+
+## Properties
+
+### Naming Style: camelCase
+
+```php
+// ✅ Correct
+class Agent
+{
+    private string $name;
+    private int $maxIterations;
+    private ?MemoryInterface $memory = null;
+    private array $tools = [];
+    private bool $isRunning = false;
+}
+
+// ❌ Incorrect
+class Agent
+{
+    private string $Name;           // PascalCase
+    private int $max_iterations;    // snake_case
+    private $memory;                // Untyped
+}
+```
+
+### Boolean Properties
+
+Start with `is`, `has`, `can`, or `should`:
+
+```php
+// ✅ Correct
+private bool $isComplete = false;
+private bool $hasErrors = false;
+private bool $canRetry = true;
+private bool $shouldCache = false;
+
+// ❌ Incorrect
+private bool $complete;     // Not clear it's boolean
+private bool $errors;       // Sounds like array
+private bool $retry;        // Ambiguous
+```
+
+### Collections
+
+Use plural names for collections:
+
+```php
+// ✅ Correct
+private array $tools = [];
+private array $listeners = [];
+private array $errors = [];
+
+// ❌ Incorrect
+private array $tool = [];       // Should be plural
+private array $listenerList = [];  // Redundant
+```
+
+## Constants
+
+### Naming Style: UPPER_SNAKE_CASE
+
+```php
+// ✅ Correct
+class AgentConfig
+{
+    public const DEFAULT_MODEL = 'claude-sonnet-4-5';
+    public const DEFAULT_MAX_TOKENS = 4096;
+    public const DEFAULT_MAX_ITERATIONS = 10;
+    public const MIN_TEMPERATURE = 0.0;
+    public const MAX_TEMPERATURE = 1.0;
+}
+
+// ❌ Incorrect
+class AgentConfig
+{
+    public const defaultModel = 'claude-sonnet-4-5';      // camelCase
+    public const Default_Max_Tokens = 4096;               // Mixed case
+    public const DEFAULTMAXITERATIONS = 10;               // No underscores
+}
+```
+
+### Grouped Constants
+
+Use class constants grouped by purpose:
+
+```php
+class FlowEvent
+{
+    // Flow lifecycle
+    public const FLOW_STARTED = 'flow.started';
+    public const FLOW_COMPLETED = 'flow.completed';
+    public const FLOW_FAILED = 'flow.failed';
+    
+    // Iteration events
+    public const ITERATION_STARTED = 'iteration.started';
+    public const ITERATION_COMPLETED = 'iteration.completed';
+    
+    // Tool events
+    public const TOOL_EXECUTION_STARTED = 'tool.started';
+    public const TOOL_EXECUTION_COMPLETED = 'tool.completed';
+}
+```
+
+## Enums (PHP 8.1+)
+
+### Naming Style: PascalCase for enum, UPPER_CASE for cases
+
+```php
+// ✅ Correct
+enum ServiceType: string
+{
+    case CACHE = 'cache';
+    case TRACING = 'tracing';
+    case TELEMETRY = 'telemetry';
+    case STORAGE = 'storage';
+}
+
+// ❌ Incorrect
+enum ServiceType: string
+{
+    case Cache = 'cache';          // Should be UPPER_CASE
+    case tracing = 'tracing';      // Should be UPPER_CASE
+    case TELEMETRY_SERVICE = 'telemetry';  // Redundant suffix
+}
+```
+
+## Namespaces
+
+### Naming Style: PascalCase matching directory structure
+
+```php
+// ✅ Correct - Matches directory structure
+namespace ClaudeAgents\Agents;              // src/Agents/
+namespace ClaudeAgents\Services\Cache;      // src/Services/Cache/
+namespace ClaudeAgents\Tools\BuiltIn;       // src/Tools/BuiltIn/
+namespace ClaudeAgents\Contracts;           // src/Contracts/
+
+// ❌ Incorrect
+namespace ClaudeAgents\agents;              // Lowercase
+namespace ClaudeAgents\Services\cache;      // Lowercase
+namespace ClaudeAgents\tools\built_in;      // snake_case
+```
+
+### Namespace Organization
+
+```
+ClaudeAgents\
+├── Agents\               # Agent implementations
+├── Tools\                # Tool implementations
+├── Loops\                # Loop strategies
+├── Services\             # Services
+│   ├── Cache\
+│   ├── Tracing\
+│   └── Telemetry\
+├── Contracts\            # Interfaces
+├── Config\               # Configuration
+├── Events\               # Event system
+├── Exceptions\           # Exceptions
+├── Memory\               # Memory management
+├── Support\              # Utilities
+└── Validation\           # Validation
+```
+
+## Files
+
+### File Naming: Match class name exactly
+
+```php
+// File: src/Agents/ReactAgent.php
+namespace ClaudeAgents\Agents;
+
+class ReactAgent {}
+
+// ✅ Correct - File matches class name
+// File: ReactAgent.php
+// Class: ReactAgent
+
+// ❌ Incorrect
+// File: react_agent.php    // Wrong case
+// File: ReactAgent.class.php  // Extra suffix
+// File: agent.php          // Doesn't match class
+```
+
+### Test File Naming
+
+```php
+// ✅ Correct - Add Test suffix
+// File: tests/Unit/Agents/ReactAgentTest.php
+namespace ClaudeAgents\Tests\Unit\Agents;
+
+class ReactAgentTest extends TestCase {}
+
+// ❌ Incorrect
+// File: ReactAgent_test.php
+// File: TestReactAgent.php
+// File: ReactAgentTests.php  // Tests should be Test
+```
+
+## Variables
+
+### Naming Style: camelCase
+
+```php
+// ✅ Correct
+$agentName = 'react_agent';
+$maxIterations = 10;
+$isComplete = false;
+$toolRegistry = new ToolRegistry();
+
+// ❌ Incorrect
+$AgentName = 'react_agent';      // PascalCase
+$agent_name = 'react_agent';     // snake_case
+$max_iterations = 10;            // snake_case
+```
+
+### Descriptive Names
+
+```php
+// ✅ Correct - Descriptive
+$calculatorTool = new Calculator();
+$validationResult = $validator->validate($code);
+$totalExecutionTime = microtime(true) - $startTime;
+
+// ❌ Incorrect - Too short or unclear
+$calc = new Calculator();
+$result = $validator->validate($code);
+$time = microtime(true) - $start;
+```
+
+### Loop Variables
+
+```php
+// ✅ Correct - Descriptive in complex loops
+foreach ($agents as $agent) {
+    foreach ($agent->getTools() as $tool) {
+        $tool->execute($input);
+    }
+}
+
+// ✅ Acceptable - Simple counters
+for ($i = 0; $i < $count; $i++) {
+    // Simple iteration
+}
+
+// ❌ Incorrect - Single letters in complex code
+foreach ($a as $x) {
+    foreach ($x->getY() as $z) {
+        $z->doSomething();
+    }
+}
+```
+
+## Parameters
+
+### Naming Style: camelCase, descriptive
+
+```php
+// ✅ Correct
+public function execute(
+    string $userInput,
+    array $executionOptions = [],
+    ?LoggerInterface $logger = null
+): AgentResult {}
+
+// ❌ Incorrect
+public function execute(
+    string $input,          // Too generic
+    array $opts = [],       // Abbreviation
+    ?LoggerInterface $l = null  // Single letter
+): AgentResult {}
+```
+
+## Exceptions
+
+### Naming: PascalCase with `Exception` suffix
+
+```php
+// ✅ Correct
+namespace ClaudeAgents\Exceptions;
+
+class AgentException extends Exception {}
+class ToolExecutionException extends Exception {}
+class ValidationException extends Exception {}
+class MaxRetriesException extends Exception {}
+
+// ❌ Incorrect
+class AgentError extends Exception {}          // Use Exception suffix
+class ToolExecutionFailed extends Exception {} // Too verbose
+class ValidationEx extends Exception {}        // Abbreviated
+```
+
+## Event Names
+
+### Naming Style: dot.notation with lowercase
+
+```php
+// ✅ Correct
+public const FLOW_STARTED = 'flow.started';
+public const TOOL_EXECUTION_COMPLETED = 'tool.execution.completed';
+public const ITERATION_FAILED = 'iteration.failed';
+
+// ❌ Incorrect
+public const FLOW_STARTED = 'FlowStarted';           // PascalCase
+public const TOOL_EXECUTION = 'TOOL_EXECUTION';      // UPPER_CASE
+public const ITERATION_FAILED = 'iteration_failed';  // snake_case
+```
+
+## Configuration Keys
+
+### Naming Style: snake_case for config arrays
+
+```php
+// ✅ Correct - Config arrays use snake_case
+$config = [
+    'max_tokens' => 1024,
+    'max_iterations' => 10,
+    'enable_caching' => true,
+    'api_key' => getenv('ANTHROPIC_API_KEY'),
+];
+
+// ❌ Incorrect
+$config = [
+    'maxTokens' => 1024,        // camelCase
+    'MaxIterations' => 10,      // PascalCase
+    'ENABLE_CACHING' => true,   // UPPER_CASE
+];
+```
+
+## Example Code
+
+Complete example with all conventions:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents\Agents;
+
+use ClaudeAgents\AgentResult;
+use ClaudeAgents\Config\AgentConfig;
+use ClaudeAgents\Contracts\AgentInterface;
+use ClaudeAgents\Contracts\ToolInterface;
+use ClaudeAgents\Exceptions\AgentException;
+use ClaudePhp\ClaudePhp;
+
+/**
+ * ReAct Agent implementation.
+ */
+class ReactAgent implements AgentInterface
+{
+    private const DEFAULT_MAX_ITERATIONS = 10;
+    private const MAX_RETRY_ATTEMPTS = 3;
+    
+    private string $agentName;
+    private array $registeredTools = [];
+    private bool $isExecuting = false;
+    
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly AgentConfig $config
+    ) {
+        $this->agentName = 'react_agent';
+    }
+    
+    public function withTool(ToolInterface $tool): self
+    {
+        $this->registeredTools[] = $tool;
+        return $this;
+    }
+    
+    public function run(string $userInput): AgentResult
+    {
+        if ($this->isExecuting) {
+            throw new AgentException('Agent is already executing');
+        }
+        
+        $this->isExecuting = true;
+        
+        try {
+            $result = $this->executeReactLoop($userInput);
+            return $result;
+        } finally {
+            $this->isExecuting = false;
+        }
+    }
+    
+    public function getName(): string
+    {
+        return $this->agentName;
+    }
+    
+    public function isComplete(): bool
+    {
+        return !$this->isExecuting;
+    }
+    
+    private function executeReactLoop(string $input): AgentResult
+    {
+        // Implementation
+    }
+}
+```
+
+## Quick Reference
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Class | PascalCase + Suffix | `ReactAgent`, `CacheService` |
+| Interface | PascalCase + Interface | `AgentInterface` |
+| Method | camelCase | `executeAgent()`, `withTool()` |
+| Property | camelCase | `$maxIterations`, `$isComplete` |
+| Constant | UPPER_SNAKE_CASE | `DEFAULT_MODEL` |
+| Enum Case | UPPER_CASE | `ServiceType::CACHE` |
+| Namespace | PascalCase | `ClaudeAgents\Agents` |
+| File | PascalCase.php | `ReactAgent.php` |
+| Test File | PascalCaseTest.php | `ReactAgentTest.php` |
+| Variable | camelCase | `$agentConfig` |
+| Config Key | snake_case | `max_tokens` |
+| Event | dot.lowercase | `flow.started` |
+
+## Enforcement
+
+- **Code Review**: Naming violations will be flagged
+- **PHPStan**: Static analysis checks naming patterns
+- **IDE**: Configure PHPStorm/VSCode with naming conventions
+- **PHP-CS-Fixer**: Enforces some naming conventions automatically

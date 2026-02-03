@@ -1,0 +1,763 @@
+# Code Quality and Validation
+
+Quality checks, validation requirements, error handling, and automated verification.
+
+## Overview
+
+Maintaining high code quality is essential for reliability and maintainability. This project enforces quality through automated tools, testing, and manual review.
+
+## Quality Tools
+
+### PHPStan (Static Analysis)
+
+**Level 6** static analysis is required for all code.
+
+```bash
+# Run PHPStan
+composer analyse
+
+# Specify level explicitly
+vendor/bin/phpstan analyse src --level=6
+
+# Generate baseline (for existing code)
+vendor/bin/phpstan analyse --generate-baseline
+```
+
+#### PHPStan Configuration
+
+Located in `phpstan.neon`:
+
+```neon
+parameters:
+    level: 6
+    paths:
+        - src
+    excludePaths:
+        - src/deprecated
+    ignoreErrors:
+        # Ignore specific patterns if needed
+```
+
+#### Common PHPStan Issues
+
+```php
+// ❌ PHPStan Error: Parameter type missing
+public function process($input)
+{
+    // Error: Parameter $input has no type
+}
+
+// ✅ Fixed: Add type hint
+public function process(string $input): void
+{
+    // OK
+}
+
+// ❌ PHPStan Error: Return type missing
+public function getResult()
+{
+    return $this->result;
+}
+
+// ✅ Fixed: Add return type
+public function getResult(): AgentResult
+{
+    return $this->result;
+}
+
+// ❌ PHPStan Error: Property type missing
+class Agent
+{
+    private $name;
+}
+
+// ✅ Fixed: Add property type
+class Agent
+{
+    private string $name;
+}
+```
+
+### PHP-CS-Fixer (Code Style)
+
+**PSR-12** compliance with project-specific rules.
+
+```bash
+# Check code style
+composer format:check
+
+# Fix code style issues
+composer format
+
+# Fix specific file
+vendor/bin/php-cs-fixer fix src/Agents/ReactAgent.php
+```
+
+#### Key Rules
+
+- PSR-12 compliance
+- Strict types declaration
+- Ordered imports
+- No unused imports
+- Trailing commas in multiline arrays
+- Single quotes for simple strings
+- Concat with spaces
+
+#### Common Style Issues
+
+```php
+// ❌ Style Error: No strict types
+<?php
+
+namespace ClaudeAgents;
+
+// ✅ Fixed: Add strict types
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents;
+
+// ❌ Style Error: Unsorted imports
+use ClaudePhp\ClaudePhp;
+use ClaudeAgents\Agent;
+use ClaudeAgents\Config\AgentConfig;
+
+// ✅ Fixed: Alphabetically sorted
+use ClaudeAgents\Agent;
+use ClaudeAgents\Config\AgentConfig;
+use ClaudePhp\ClaudePhp;
+
+// ❌ Style Error: Double quotes without interpolation
+$name = "agent";
+
+// ✅ Fixed: Single quotes
+$name = 'agent';
+
+// ❌ Style Error: Old array syntax
+$config = array('key' => 'value');
+
+// ✅ Fixed: Short array syntax
+$config = ['key' => 'value'];
+```
+
+## Pre-Commit Checks
+
+### Required Checks
+
+Run before every commit:
+
+```bash
+# All checks
+composer check
+
+# Individual checks
+composer format:check   # Code style
+composer analyse        # PHPStan
+composer test          # All tests
+```
+
+### Commit Hook
+
+Create `.git/hooks/pre-commit`:
+
+```bash
+#!/bin/bash
+
+echo "Running pre-commit checks..."
+
+# Run format check
+echo "Checking code style..."
+composer format:check
+if [ $? -ne 0 ]; then
+    echo "❌ Code style errors found. Run 'composer format' to fix."
+    exit 1
+fi
+
+# Run static analysis
+echo "Running static analysis..."
+composer analyse
+if [ $? -ne 0 ]; then
+    echo "❌ PHPStan errors found. Fix errors before committing."
+    exit 1
+fi
+
+# Run tests
+echo "Running tests..."
+composer test
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Fix tests before committing."
+    exit 1
+fi
+
+echo "✅ All checks passed!"
+exit 0
+```
+
+Make executable:
+
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+## Input Validation
+
+### Validate Early
+
+```php
+// ✅ Good - Validate at entry point
+class Agent
+{
+    public function run(string $input): AgentResult
+    {
+        // Validate input immediately
+        if (empty($input)) {
+            throw new \InvalidArgumentException('Input cannot be empty');
+        }
+        
+        if (strlen($input) > 10000) {
+            throw new \InvalidArgumentException('Input too long (max 10,000 chars)');
+        }
+        
+        // Proceed with validated input
+        return $this->execute($input);
+    }
+}
+
+// ❌ Bad - No validation
+class Agent
+{
+    public function run(string $input): AgentResult
+    {
+        // Might fail deep in execution
+        return $this->execute($input);
+    }
+}
+```
+
+### Validation Patterns
+
+```php
+// String validation
+if (!is_string($input) || trim($input) === '') {
+    throw new \InvalidArgumentException('Input must be a non-empty string');
+}
+
+// Array validation
+if (!is_array($options) || empty($options)) {
+    throw new \InvalidArgumentException('Options must be a non-empty array');
+}
+
+// Enum validation
+if (!in_array($type, ['react', 'plan', 'reflection'], true)) {
+    throw new \InvalidArgumentException('Invalid agent type');
+}
+
+// Range validation
+if ($maxIterations < 1 || $maxIterations > 100) {
+    throw new \InvalidArgumentException('Max iterations must be between 1 and 100');
+}
+
+// Object validation
+if (!$tool instanceof ToolInterface) {
+    throw new \InvalidArgumentException('Tool must implement ToolInterface');
+}
+```
+
+## Error Handling
+
+### Exception Hierarchy
+
+Use specific exception types:
+
+```php
+namespace ClaudeAgents\Exceptions;
+
+// Base exception
+class AgentException extends \Exception {}
+
+// Specific exceptions
+class MaxIterationsException extends AgentException {}
+class ToolExecutionException extends AgentException {}
+class ValidationException extends AgentException {}
+class ConfigurationException extends AgentException {}
+```
+
+### Error Handling Patterns
+
+```php
+// ✅ Good - Specific exception handling
+public function execute(): AgentResult
+{
+    try {
+        return $this->agent->run($input);
+    } catch (MaxIterationsException $e) {
+        // Handle timeout specifically
+        $this->logger->warning('Agent timed out', [
+            'iterations' => $e->getIterations(),
+        ]);
+        return $this->handleTimeout($e);
+    } catch (ToolExecutionException $e) {
+        // Handle tool errors
+        $this->logger->error('Tool execution failed', [
+            'tool' => $e->getToolName(),
+            'error' => $e->getMessage(),
+        ]);
+        return $this->handleToolError($e);
+    } catch (AgentException $e) {
+        // Handle general agent errors
+        $this->logger->error('Agent error', [
+            'error' => $e->getMessage(),
+        ]);
+        throw $e;
+    }
+}
+
+// ❌ Bad - Generic exception handling
+public function execute(): AgentResult
+{
+    try {
+        return $this->agent->run($input);
+    } catch (\Exception $e) {
+        // Can't handle different errors differently
+        $this->logger->error('Error: ' . $e->getMessage());
+        throw $e;
+    }
+}
+```
+
+### Never Suppress Errors
+
+```php
+// ❌ Bad - Silent failure
+try {
+    $result = $tool->execute($input);
+} catch (\Exception $e) {
+    // Silent failure - very bad!
+}
+
+// ❌ Bad - Returning null on error
+try {
+    return $tool->execute($input);
+} catch (\Exception $e) {
+    return null;  // Hides the error
+}
+
+// ✅ Good - Log and rethrow
+try {
+    return $tool->execute($input);
+} catch (\Exception $e) {
+    $this->logger->error('Tool execution failed', [
+        'tool' => $tool->getName(),
+        'error' => $e->getMessage(),
+    ]);
+    throw new ToolExecutionException(
+        "Tool {$tool->getName()} failed: {$e->getMessage()}",
+        0,
+        $e
+    );
+}
+```
+
+## Circuit Breaker Pattern
+
+Prevent cascading failures:
+
+```php
+use ClaudeAgents\Helpers\CircuitBreaker;
+
+$circuitBreaker = new CircuitBreaker(
+    failureThreshold: 5,    // Open after 5 failures
+    recoveryTime: 60,       // Try again after 60s
+    timeout: 30             // 30s timeout
+);
+
+function callExternalService(): mixed
+{
+    global $circuitBreaker;
+    
+    // Check if circuit is open
+    if ($circuitBreaker->isOpen()) {
+        throw new \RuntimeException('Service temporarily unavailable');
+    }
+    
+    try {
+        $result = $this->externalApi->call();
+        $circuitBreaker->recordSuccess();
+        return $result;
+    } catch (\Exception $e) {
+        $circuitBreaker->recordFailure();
+        throw $e;
+    }
+}
+```
+
+## Output Sanitization
+
+### Sanitize Sensitive Data
+
+```php
+class OutputSanitizer
+{
+    private const SENSITIVE_PATTERNS = [
+        '/sk-ant-api03-[\w-]+/',           // API keys
+        '/\b\d{16}\b/',                     // Credit cards
+        '/\b\d{3}-\d{2}-\d{4}\b/',         // SSNs
+        '/Bearer\s+[\w-]+/',                // Bearer tokens
+    ];
+    
+    public function sanitize(string $output): string
+    {
+        $sanitized = $output;
+        
+        foreach (self::SENSITIVE_PATTERNS as $pattern) {
+            $sanitized = preg_replace($pattern, '[REDACTED]', $sanitized);
+        }
+        
+        return $sanitized;
+    }
+}
+
+// Usage
+$sanitizer = new OutputSanitizer();
+$safe = $sanitizer->sanitize($agent->getAnswer());
+```
+
+### Validate Output
+
+```php
+// ✅ Good - Validate agent output
+public function run(string $input): AgentResult
+{
+    $result = $this->execute($input);
+    
+    // Validate result
+    if (empty($result->getAnswer())) {
+        throw new AgentException('Agent returned empty answer');
+    }
+    
+    if ($result->getIterations() === 0) {
+        throw new AgentException('Agent did not iterate');
+    }
+    
+    // Sanitize sensitive data
+    $sanitized = $this->sanitizer->sanitize($result->getAnswer());
+    
+    return new AgentResult(
+        answer: $sanitized,
+        iterations: $result->getIterations(),
+        messages: $result->getMessages()
+    );
+}
+```
+
+## Rate Limiting
+
+### Implement Rate Limiting
+
+```php
+class RateLimiter
+{
+    private CacheInterface $cache;
+    private int $maxRequests;
+    private int $windowSeconds;
+    
+    public function __construct(
+        CacheInterface $cache,
+        int $maxRequests = 100,
+        int $windowSeconds = 3600
+    ) {
+        $this->cache = $cache;
+        $this->maxRequests = $maxRequests;
+        $this->windowSeconds = $windowSeconds;
+    }
+    
+    public function checkLimit(string $identifier): bool
+    {
+        $key = "ratelimit:{$identifier}";
+        $count = (int) $this->cache->get($key, 0);
+        
+        if ($count >= $this->maxRequests) {
+            return false;
+        }
+        
+        $this->cache->set($key, $count + 1, $this->windowSeconds);
+        
+        return true;
+    }
+}
+
+// Usage
+$rateLimiter = new RateLimiter($cache, maxRequests: 100, windowSeconds: 3600);
+
+if (!$rateLimiter->checkLimit($userId)) {
+    throw new \RuntimeException('Rate limit exceeded');
+}
+```
+
+## Monitoring and Logging
+
+### Structured Logging
+
+```php
+use Psr\Log\LoggerInterface;
+
+class Agent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly ?LoggerInterface $logger = null
+    ) {}
+    
+    public function run(string $input): AgentResult
+    {
+        $requestId = uniqid('req_', true);
+        $startTime = microtime(true);
+        
+        // Log start
+        $this->logger?->info('Agent execution started', [
+            'request_id' => $requestId,
+            'input_length' => strlen($input),
+            'agent_type' => get_class($this),
+        ]);
+        
+        try {
+            $result = $this->execute($input);
+            
+            // Log success
+            $duration = microtime(true) - $startTime;
+            $this->logger?->info('Agent execution completed', [
+                'request_id' => $requestId,
+                'duration_ms' => $duration * 1000,
+                'iterations' => $result->getIterations(),
+                'tokens' => $result->getTotalTokens(),
+            ]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            // Log error
+            $duration = microtime(true) - $startTime;
+            $this->logger?->error('Agent execution failed', [
+                'request_id' => $requestId,
+                'duration_ms' => $duration * 1000,
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+            ]);
+            
+            throw $e;
+        }
+    }
+}
+```
+
+### Health Checks
+
+```php
+class HealthCheck
+{
+    private array $checks = [];
+    
+    public function addCheck(string $name, callable $check): self
+    {
+        $this->checks[$name] = $check;
+        return $this;
+    }
+    
+    public function check(): array
+    {
+        $results = [];
+        $allHealthy = true;
+        
+        foreach ($this->checks as $name => $check) {
+            try {
+                $result = $check();
+                $results[$name] = [
+                    'status' => 'healthy',
+                    'data' => $result,
+                ];
+            } catch (\Exception $e) {
+                $allHealthy = false;
+                $results[$name] = [
+                    'status' => 'unhealthy',
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+        
+        return [
+            'status' => $allHealthy ? 'healthy' : 'unhealthy',
+            'checks' => $results,
+            'timestamp' => time(),
+        ];
+    }
+}
+
+// Usage
+$health = new HealthCheck();
+
+$health->addCheck('database', fn() => $db->ping());
+$health->addCheck('cache', fn() => $cache->get('health_check') !== false);
+$health->addCheck('api', fn() => $api->status());
+
+$status = $health->check();
+```
+
+## Performance
+
+### Profiling
+
+```php
+// Profile critical sections
+$profiler = new Profiler();
+
+$profiler->start('agent_execution');
+$result = $agent->run($input);
+$profiler->stop('agent_execution');
+
+$profiler->start('result_processing');
+$processed = $this->processResult($result);
+$profiler->stop('result_processing');
+
+// Get results
+$stats = $profiler->getStats();
+foreach ($stats as $section => $data) {
+    echo "{$section}: {$data['duration']}ms\n";
+}
+```
+
+### Memory Management
+
+```php
+// Monitor memory usage
+class MemoryMonitor
+{
+    private int $threshold;
+    
+    public function __construct(int $thresholdMb = 128)
+    {
+        $this->threshold = $thresholdMb * 1024 * 1024;
+    }
+    
+    public function check(): void
+    {
+        $usage = memory_get_usage(true);
+        
+        if ($usage > $this->threshold) {
+            throw new \RuntimeException(
+                "Memory usage ({$this->formatBytes($usage)}) " .
+                "exceeds threshold ({$this->formatBytes($this->threshold)})"
+            );
+        }
+    }
+    
+    private function formatBytes(int $bytes): string
+    {
+        return round($bytes / 1024 / 1024, 2) . 'MB';
+    }
+}
+
+// Usage
+$monitor = new MemoryMonitor(thresholdMb: 256);
+
+foreach ($largeBatch as $item) {
+    $monitor->check();
+    $this->process($item);
+}
+```
+
+## Code Review Checklist
+
+Before submitting for review:
+
+### Code Quality
+- [ ] Passes `composer check` (format, analyse, test)
+- [ ] PHPStan Level 6 with no errors
+- [ ] All tests pass
+- [ ] Code coverage maintained or improved
+- [ ] No unused imports or variables
+- [ ] No debugging code (var_dump, dd, etc.)
+
+### Standards
+- [ ] Strict types declared
+- [ ] All parameters type-hinted
+- [ ] All returns type-hinted
+- [ ] Properties type-hinted
+- [ ] PSR-12 formatting
+- [ ] Naming conventions followed
+
+### Documentation
+- [ ] PHPDoc on public methods
+- [ ] Examples in documentation
+- [ ] CHANGELOG updated
+- [ ] README updated (if needed)
+
+### Testing
+- [ ] Unit tests for new features
+- [ ] Integration tests where appropriate
+- [ ] Edge cases tested
+- [ ] Error conditions tested
+
+### Security
+- [ ] Input validated
+- [ ] Output sanitized
+- [ ] No hardcoded secrets
+- [ ] Error messages don't leak info
+
+### Performance
+- [ ] No N+1 queries
+- [ ] Appropriate caching
+- [ ] Memory usage reasonable
+- [ ] No obvious bottlenecks
+
+## CI/CD Checks
+
+Automated checks run on all PRs:
+
+```yaml
+# .github/workflows/code-quality.yml
+name: Code Quality
+
+on: [push, pull_request]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      
+      - name: Install dependencies
+        run: composer install
+      
+      - name: Check code style
+        run: composer format:check
+      
+      - name: Run PHPStan
+        run: composer analyse
+      
+      - name: Run tests
+        run: composer test
+```
+
+## Quick Reference
+
+| Check | Command | Purpose |
+|-------|---------|---------|
+| All checks | `composer check` | Run all quality checks |
+| Code style | `composer format:check` | Check PSR-12 compliance |
+| Fix style | `composer format` | Auto-fix style issues |
+| Static analysis | `composer analyse` | Run PHPStan Level 6 |
+| All tests | `composer test` | Run PHPUnit tests |
+| Unit tests | `composer test:unit` | Run unit tests only |
+| Coverage | `composer test:coverage` | Generate coverage report |
+
+## References
+
+- [PHPStan Documentation](https://phpstan.org/)
+- [PHP-CS-Fixer Documentation](https://github.com/FriendsOfPHP/PHP-CS-Fixer)
+- [PSR-12 Coding Standard](https://www.php-fig.org/psr/psr-12/)
+- [Best Practices Guide](../docs/BestPractices.md)

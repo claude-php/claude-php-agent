@@ -375,7 +375,7 @@ $costTracker = new CostTracker();
 $result = $agent->run($query);
 
 $costTracker->recordUsage(
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-4-5',
     inputTokens: $result->getUsage()['input_tokens'] ?? 0,
     outputTokens: $result->getUsage()['output_tokens'] ?? 0,
 );
@@ -621,7 +621,7 @@ $healthCheck->addCheck('api_connection', function () use ($client) {
     try {
         // Quick API test
         $response = $client->messages()->create([
-            'model' => 'claude-3-haiku-20240307',
+            'model' => 'claude-haiku-4-5',
             'max_tokens' => 10,
             'messages' => [['role' => 'user', 'content' => 'test']],
         ]);
@@ -930,7 +930,7 @@ $cache->set($key, $result, 3600);
 
 // 2. Use faster model
 $client = new ClaudePhp(
-    model: 'claude-3-haiku-20240307'
+    model: 'claude-haiku-4-5'
 );
 
 // 3. Implement timeout

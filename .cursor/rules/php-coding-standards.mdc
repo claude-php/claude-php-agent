@@ -1,0 +1,514 @@
+# PHP Coding Standards
+
+Enforce PHP 8.1+ features, PSR-12 coding style, strict types, and modern PHP best practices.
+
+## Overview
+
+This project requires PHP 8.1+ and follows PSR-12 coding standards with strict type declarations. All code must be formatted using PHP-CS-Fixer before commits.
+
+## Required PHP Version
+
+- Minimum: PHP 8.1
+- Supported: PHP 8.1, 8.2, 8.3
+- Use modern PHP features available in these versions
+
+## Strict Types Declaration
+
+**REQUIRED**: Every PHP file must start with strict types declaration.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents\YourNamespace;
+
+// Your code here
+```
+
+### ✅ Correct
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents\Agents;
+
+class MyAgent
+{
+    // ...
+}
+```
+
+### ❌ Incorrect
+```php
+<?php
+
+namespace ClaudeAgents\Agents;  // Missing declare(strict_types=1)
+
+class MyAgent
+{
+    // ...
+}
+```
+
+## Type Hints
+
+All parameters, return types, and properties must be type-hinted.
+
+### Parameters and Returns
+
+```php
+// ✅ Correct - Full type hints
+public function execute(string $input, array $options = []): AgentResult
+{
+    // ...
+}
+
+// ✅ Correct - Union types (PHP 8.0+)
+public function process(string|int $value): string|null
+{
+    // ...
+}
+
+// ✅ Correct - Nullable type
+public function find(?string $id): ?Agent
+{
+    // ...
+}
+
+// ❌ Incorrect - Missing type hints
+public function execute($input, $options = [])
+{
+    // ...
+}
+```
+
+### Properties
+
+```php
+// ✅ Correct - Typed properties
+class Agent
+{
+    private string $name;
+    private ?MemoryInterface $memory = null;
+    private array $tools = [];
+    
+    // PHP 8.1+ readonly
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly AgentConfig $config
+    ) {}
+}
+
+// ❌ Incorrect - Untyped properties
+class Agent
+{
+    private $name;  // No type
+    private $memory;  // No type
+}
+```
+
+### Array Type Hints
+
+Use PHPDoc for array contents:
+
+```php
+/**
+ * @param array<string, mixed> $options
+ * @param array<ToolInterface> $tools
+ * @return array<string, AgentResult>
+ */
+public function executeBatch(array $options, array $tools): array
+{
+    // ...
+}
+```
+
+## PHP 8.1+ Features
+
+### Constructor Property Promotion
+
+```php
+// ✅ Correct - Use property promotion
+class AgentConfig
+{
+    public function __construct(
+        public readonly string $model,
+        public readonly int $maxTokens,
+        public readonly int $maxIterations = 10,
+        public readonly float $temperature = 0.7
+    ) {}
+}
+
+// ❌ Avoid - Old style
+class AgentConfig
+{
+    private string $model;
+    private int $maxTokens;
+    
+    public function __construct(string $model, int $maxTokens)
+    {
+        $this->model = $model;
+        $this->maxTokens = $maxTokens;
+    }
+}
+```
+
+### Named Arguments
+
+```php
+// ✅ Correct - Use named arguments for clarity
+$config = new AgentConfig(
+    model: 'claude-sonnet-4-5',
+    maxTokens: 1024,
+    maxIterations: 10
+);
+
+// ✅ Correct - Skip optional parameters
+$result = $agent->run(
+    input: 'Your task',
+    options: ['debug' => true]
+);
+```
+
+### Match Expressions
+
+```php
+// ✅ Correct - Use match for simple mappings
+$status = match ($event->type) {
+    'token' => 'streaming',
+    'tool_start' => 'executing',
+    'end' => 'completed',
+    default => 'processing'
+};
+
+// ❌ Avoid - Switch for simple cases
+switch ($event->type) {
+    case 'token':
+        $status = 'streaming';
+        break;
+    // ... etc
+}
+```
+
+### Enums (PHP 8.1+)
+
+```php
+// ✅ Correct - Use enums for fixed sets of values
+enum ServiceType: string
+{
+    case CACHE = 'cache';
+    case TRACING = 'tracing';
+    case TELEMETRY = 'telemetry';
+}
+
+// Usage
+$service = $manager->get(ServiceType::CACHE);
+```
+
+### Readonly Properties
+
+```php
+// ✅ Correct - Use readonly for immutable data
+class Event
+{
+    public function __construct(
+        public readonly string $type,
+        public readonly array $data,
+        public readonly float $timestamp
+    ) {}
+}
+```
+
+## PSR-12 Formatting
+
+### Indentation and Spacing
+
+- Use 4 spaces for indentation (no tabs)
+- One blank line after namespace declaration
+- One blank line between methods
+- No trailing whitespace
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents\Agents;
+
+use ClaudeAgents\Config\AgentConfig;
+use ClaudeAgents\Contracts\AgentInterface;
+
+class ReactAgent implements AgentInterface
+{
+    private string $name;
+
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly AgentConfig $config
+    ) {
+        $this->name = 'react_agent';
+    }
+
+    public function run(string $input): AgentResult
+    {
+        // Implementation
+    }
+}
+```
+
+### Imports
+
+```php
+// ✅ Correct - Alphabetically sorted, grouped
+use ClaudeAgents\Agent;
+use ClaudeAgents\AgentResult;
+use ClaudeAgents\Config\AgentConfig;
+use ClaudeAgents\Contracts\AgentInterface;
+use ClaudePhp\ClaudePhp;
+
+// ❌ Incorrect - Unsorted, unused imports
+use ClaudePhp\ClaudePhp;
+use ClaudeAgents\Agent;
+use ClaudeAgents\UnusedClass;  // Unused
+```
+
+### Method Formatting
+
+```php
+// ✅ Correct - Method spacing
+public function methodOne(): void
+{
+    // Code
+}
+
+public function methodTwo(): string
+{
+    return 'value';
+}
+
+// ❌ Incorrect - No spacing between methods
+public function methodOne(): void
+{
+    // Code
+}
+public function methodTwo(): string
+{
+    return 'value';
+}
+```
+
+### Array Formatting
+
+```php
+// ✅ Correct - Short array syntax with trailing comma
+$config = [
+    'model' => 'claude-sonnet-4-5',
+    'max_tokens' => 1024,
+    'temperature' => 0.7,
+];
+
+// ❌ Incorrect - Old array syntax
+$config = array(
+    'model' => 'claude-sonnet-4-5'
+);
+```
+
+## String Handling
+
+```php
+// ✅ Correct - Single quotes for simple strings
+$name = 'agent';
+$path = 'src/Agents';
+
+// ✅ Correct - Double quotes for interpolation
+$message = "Agent {$name} completed";
+
+// ✅ Correct - Concatenation with spaces
+$full = $first . ' ' . $last;
+
+// ❌ Incorrect - Double quotes without interpolation
+$name = "agent";
+```
+
+## Comments and Documentation
+
+```php
+// ✅ Correct - PHPDoc for methods
+/**
+ * Execute the agent with the given input.
+ *
+ * @param string $input The user input or task
+ * @param array<string, mixed> $options Additional options
+ * @return AgentResult The execution result
+ * @throws AgentException If execution fails
+ */
+public function run(string $input, array $options = []): AgentResult
+{
+    // Implementation
+}
+
+// ✅ Correct - Inline comments for complex logic
+// Calculate the optimal batch size based on memory constraints
+$batchSize = (int) floor($availableMemory / $itemSize);
+
+// ❌ Incorrect - Obvious comments
+// Set the name
+$this->name = $name;
+```
+
+## Error Handling
+
+```php
+// ✅ Correct - Specific exception types
+use ClaudeAgents\Exceptions\AgentException;
+use ClaudeAgents\Exceptions\ToolExecutionException;
+
+public function execute(): void
+{
+    if (!$this->isValid()) {
+        throw new AgentException('Invalid configuration');
+    }
+}
+
+// ✅ Correct - Try-catch with specific types
+try {
+    $result = $tool->execute($input);
+} catch (ToolExecutionException $e) {
+    // Handle tool errors
+    $this->logger->error('Tool failed: ' . $e->getMessage());
+    throw $e;
+}
+
+// ❌ Incorrect - Generic exceptions
+throw new Exception('Something went wrong');
+
+// ❌ Incorrect - Empty catch
+try {
+    $result = $tool->execute($input);
+} catch (Exception $e) {
+    // Silent failure
+}
+```
+
+## Code Formatting Tools
+
+### Before Every Commit
+
+Run PHP-CS-Fixer to ensure code style compliance:
+
+```bash
+# Fix code style issues
+composer format
+
+# Check without fixing
+composer format:check
+```
+
+### Configuration
+
+The project uses `.php-cs-fixer.php` with these key rules:
+- PSR-12 compliance
+- Strict types declaration
+- Ordered imports
+- No unused imports
+- Trailing commas in multiline arrays
+- Single quotes for simple strings
+- Concat with spaces
+
+## Quality Checks
+
+Run all checks before committing:
+
+```bash
+# Run all checks (format, analyze, test)
+composer check
+
+# Individual checks
+composer format:check  # Code style
+composer analyse       # PHPStan Level 6
+composer test          # PHPUnit tests
+```
+
+## Common Mistakes to Avoid
+
+### 1. Missing Strict Types
+
+```php
+// ❌ Incorrect
+<?php
+
+namespace ClaudeAgents\Agents;
+
+// ✅ Correct
+<?php
+
+declare(strict_types=1);
+
+namespace ClaudeAgents\Agents;
+```
+
+### 2. Untyped Parameters
+
+```php
+// ❌ Incorrect
+public function process($data)
+{
+    return $data;
+}
+
+// ✅ Correct
+public function process(mixed $data): mixed
+{
+    return $data;
+}
+```
+
+### 3. Old Array Syntax
+
+```php
+// ❌ Incorrect
+$items = array('one', 'two');
+
+// ✅ Correct
+$items = ['one', 'two'];
+```
+
+### 4. Unnecessary Else
+
+```php
+// ❌ Incorrect
+public function getValue(): string
+{
+    if ($this->hasValue) {
+        return $this->value;
+    } else {
+        return 'default';
+    }
+}
+
+// ✅ Correct
+public function getValue(): string
+{
+    if ($this->hasValue) {
+        return $this->value;
+    }
+    
+    return 'default';
+}
+```
+
+## References
+
+- [PSR-12: Extended Coding Style](https://www.php-fig.org/psr/psr-12/)
+- [PHP 8.1 Features](https://www.php.net/releases/8.1/en.php)
+- [PHP-CS-Fixer Documentation](https://github.com/FriendsOfPHP/PHP-CS-Fixer)
+- [PHPStan Documentation](https://phpstan.org/user-guide/getting-started)
+
+## Enforcement
+
+1. **Pre-commit**: Run `composer format` and `composer check`
+2. **CI/CD**: Automated checks run on all pull requests
+3. **Code Review**: Style violations will be flagged
+4. **IDE**: Configure PHPStorm/VSCode with PHP-CS-Fixer integration

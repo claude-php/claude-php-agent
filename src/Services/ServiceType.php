@@ -19,6 +19,8 @@ enum ServiceType: string
     case TELEMETRY = 'telemetry';
     case SESSION = 'session';
     case TRANSACTION = 'transaction';
+    case FLOW_EXECUTOR = 'flow_executor';
+    case EVENT_MANAGER = 'event_manager';
 
     /**
      * Get the fully qualified class name for this service type.
@@ -36,6 +38,8 @@ enum ServiceType: string
             self::TELEMETRY => 'ClaudeAgents\\Services\\Telemetry\\TelemetryService',
             self::SESSION => 'ClaudeAgents\\Services\\Session\\SessionService',
             self::TRANSACTION => 'ClaudeAgents\\Services\\Transaction\\TransactionService',
+            self::FLOW_EXECUTOR => 'ClaudeAgents\\Execution\\StreamingFlowExecutor',
+            self::EVENT_MANAGER => 'ClaudeAgents\\Events\\FlowEventManager',
         };
     }
 
@@ -55,6 +59,8 @@ enum ServiceType: string
             self::TELEMETRY => 'ClaudeAgents\\Services\\Telemetry\\TelemetryServiceFactory',
             self::SESSION => 'ClaudeAgents\\Services\\Session\\SessionServiceFactory',
             self::TRANSACTION => 'ClaudeAgents\\Services\\Transaction\\TransactionServiceFactory',
+            self::FLOW_EXECUTOR => 'ClaudeAgents\\Services\\Execution\\StreamingFlowExecutorServiceFactory',
+            self::EVENT_MANAGER => 'ClaudeAgents\\Services\\Execution\\FlowEventManagerServiceFactory',
         };
     }
 }

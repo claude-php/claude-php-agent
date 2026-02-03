@@ -1,0 +1,704 @@
+# Documentation Standards
+
+Documentation requirements for code, tutorials, examples, and project documentation.
+
+## Overview
+
+Good documentation is essential for maintainability and adoption. All public APIs, classes, and methods must be documented. Tutorials and examples should be comprehensive and runnable.
+
+## PHPDoc Comments
+
+### Required for All Public Members
+
+All public classes, methods, properties, and constants must have PHPDoc comments.
+
+```php
+// ✅ Correct - Complete PHPDoc
+/**
+ * Execute the agent with the given input.
+ *
+ * This method orchestrates the ReAct loop, calling tools as needed
+ * and managing the conversation state until a final answer is reached.
+ *
+ * @param string $input The user input or task description
+ * @param array<string, mixed> $options Additional execution options:
+ *   - max_iterations: Override default max iterations
+ *   - debug: Enable debug mode
+ * @return AgentResult The execution result containing answer and metadata
+ * @throws AgentException If execution fails after all retries
+ * @throws \InvalidArgumentException If input is empty
+ */
+public function run(string $input, array $options = []): AgentResult
+{
+    // Implementation
+}
+
+// ❌ Incorrect - Missing PHPDoc
+public function run(string $input, array $options = []): AgentResult
+{
+    // Implementation
+}
+```
+
+### Class Documentation
+
+```php
+/**
+ * ReAct (Reason-Act-Observe) Agent implementation.
+ *
+ * Implements the ReAct pattern for autonomous task execution with tools.
+ * The agent iteratively thinks, acts using tools, and observes results
+ * until reaching a conclusion.
+ *
+ * **Features:**
+ * - Autonomous tool selection
+ * - Multi-iteration reasoning
+ * - Error recovery with retries
+ * - ML-based parameter optimization
+ *
+ * **Example:**
+ * ```php
+ * $agent = new ReactAgent($client, [
+ *     'tools' => [$calculatorTool, $searchTool],
+ *     'max_iterations' => 10,
+ * ]);
+ *
+ * $result = $agent->run('Calculate the sum of prime numbers under 100');
+ * echo $result->getAnswer();
+ * ```
+ *
+ * @package ClaudeAgents\Agents
+ * @see AgentInterface
+ * @see ReactLoop
+ */
+class ReactAgent implements AgentInterface
+{
+    // Implementation
+}
+```
+
+### Method Documentation
+
+Required tags:
+- `@param` - For each parameter with type and description
+- `@return` - Return type and description
+- `@throws` - Each exception that can be thrown
+
+```php
+/**
+ * Register a tool for the agent to use.
+ *
+ * The tool will be available for the agent to call during execution.
+ * Tool names must be unique within the agent.
+ *
+ * @param ToolInterface $tool The tool to register
+ * @return self For method chaining
+ * @throws \InvalidArgumentException If tool name already registered
+ */
+public function addTool(ToolInterface $tool): self
+{
+    // Implementation
+}
+```
+
+### Property Documentation
+
+```php
+/**
+ * Maximum number of iterations before stopping.
+ *
+ * @var int
+ */
+private int $maxIterations = 10;
+
+/**
+ * Registered tools available to the agent.
+ *
+ * @var array<string, ToolInterface>
+ */
+private array $tools = [];
+
+/**
+ * Optional memory for persistent state.
+ *
+ * @var MemoryInterface|null
+ */
+private ?MemoryInterface $memory = null;
+```
+
+### Array Type Hints
+
+Use detailed array type hints:
+
+```php
+/**
+ * @param array<string> $names List of names
+ * @param array<int, Tool> $tools Indexed array of tools
+ * @param array<string, mixed> $options Associative array of options
+ * @param array<string, array<string, int>> $nested Nested array structure
+ */
+public function process(
+    array $names,
+    array $tools,
+    array $options,
+    array $nested
+): void {
+    // Implementation
+}
+```
+
+### Generics (PHPStan)
+
+```php
+/**
+ * @template T
+ * @param class-string<T> $className
+ * @return T
+ */
+public function create(string $className): object
+{
+    return new $className();
+}
+```
+
+## Inline Comments
+
+### When to Use
+
+Use inline comments for:
+- Complex logic that isn't obvious
+- Non-obvious algorithms or calculations
+- Workarounds for known issues
+- Performance-critical code explanations
+
+```php
+// ✅ Correct - Explains complex logic
+// Calculate optimal batch size based on available memory
+// Formula: batch_size = floor(available_memory / (item_size * safety_factor))
+$batchSize = (int) floor(
+    $this->getAvailableMemory() / ($itemSize * self::SAFETY_FACTOR)
+);
+
+// ✅ Correct - Explains workaround
+// HACK: Wait 100ms before retry to avoid rate limiting
+// This is a temporary workaround until we implement proper backoff
+usleep(100000);
+
+// ❌ Incorrect - Obvious comments
+// Set the name
+$this->name = $name;
+
+// Loop through tools
+foreach ($this->tools as $tool) {
+    // ...
+}
+```
+
+### TODO Comments
+
+Format: `// TODO: Description [optional: (ticket #)]`
+
+```php
+// TODO: Implement caching for tool results
+// TODO: Add validation for input length (issue #123)
+// TODO: Refactor this into separate method
+
+// ❌ Incorrect - No description
+// TODO
+// TODO: fix this
+```
+
+## Code Examples in Documentation
+
+### Include Runnable Examples
+
+```php
+/**
+ * Create a new ReAct agent with tools.
+ *
+ * **Example:**
+ * ```php
+ * use ClaudeAgents\Agents\ReactAgent;
+ * use ClaudeAgents\Tools\Tool;
+ * use ClaudePhp\ClaudePhp;
+ *
+ * $client = new ClaudePhp(apiKey: getenv('ANTHROPIC_API_KEY'));
+ *
+ * $calculator = Tool::create('calculator')
+ *     ->description('Perform calculations')
+ *     ->parameter('expression', 'string')
+ *     ->handler(fn($input) => eval("return {$input['expression']};"));
+ *
+ * $agent = new ReactAgent($client, [
+ *     'tools' => [$calculator],
+ *     'max_iterations' => 10,
+ * ]);
+ *
+ * $result = $agent->run('What is 25 * 17?');
+ * echo $result->getAnswer(); // Output: 425
+ * ```
+ *
+ * @param ClaudePhp $client The Claude API client
+ * @param array<string, mixed> $options Configuration options
+ */
+public function __construct(ClaudePhp $client, array $options = [])
+{
+    // Implementation
+}
+```
+
+## Tutorial Documentation
+
+### File Naming Convention
+
+Numbered markdown files with descriptive names:
+
+```
+docs/tutorials/
+├── ReactAgent_Tutorial.md
+├── Services_Tracing.md
+├── ProductionPatterns_Tutorial.md
+└── getting-started/
+    ├── 00-Introduction.md
+    ├── 01-First-Agent.md
+    ├── 02-ReAct-Basics.md
+    ├── 03-Multi-Tool.md
+    └── 04-Production-Patterns.md
+```
+
+### Tutorial Structure
+
+Each tutorial should follow this structure:
+
+```markdown
+# Tutorial Title
+
+Brief introduction (1-2 paragraphs).
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Tutorial 1: Basic Concept](#tutorial-1-basic-concept)
+- [Tutorial 2: Advanced Usage](#tutorial-2-advanced-usage)
+- [Common Patterns](#common-patterns)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
+
+## Prerequisites
+
+- Required tools/knowledge
+- Setup instructions
+
+## Tutorial 1: Basic Concept
+
+### Step 1: Description
+
+Explanation of what this step does.
+
+```php
+<?php
+// Complete, runnable code example
+```
+
+**Expected Output:**
+```
+Output example
+```
+
+### Step 2: Next Step
+
+...
+
+## Common Patterns
+
+Reusable patterns and best practices.
+
+## Troubleshooting
+
+Common issues and solutions.
+
+## Next Steps
+
+- Link to related tutorials
+- Further reading
+
+---
+
+*Tutorial Version: 1.0*
+*Framework Version: v0.8.0+*
+*Last Updated: February 2026*
+```
+
+### Tutorial Best Practices
+
+1. **Runnable Examples**: All code must be complete and runnable
+2. **Progressive Complexity**: Start simple, build up
+3. **Real-World Scenarios**: Use practical examples
+4. **Expected Output**: Show what should happen
+5. **Troubleshooting**: Address common issues
+6. **Cross-References**: Link to related docs
+
+## Example Files
+
+### File Naming Convention
+
+Numbered PHP files with descriptive names:
+
+```
+examples/
+├── basic_agent.php
+├── react_with_tools.php
+├── streaming_execution.php
+└── tutorials/
+    ├── code-generation/
+    │   ├── 01-basic-generation.php
+    │   ├── 02-with-validation.php
+    │   └── 03-retry-logic.php
+    └── streaming-flow/
+        ├── 01-basic-streaming.php
+        ├── 02-progress-tracking.php
+        └── 03-multiple-listeners.php
+```
+
+### Example File Structure
+
+```php
+<?php
+
+/**
+ * Example: Basic ReAct Agent
+ *
+ * Demonstrates:
+ * - Creating a simple agent
+ * - Registering tools
+ * - Executing a task
+ * - Handling results
+ */
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+use ClaudeAgents\Agent;
+use ClaudeAgents\Tools\Tool;
+use ClaudePhp\ClaudePhp;
+
+// Load environment variables
+$apiKey = getenv('ANTHROPIC_API_KEY') ?: throw new RuntimeException('ANTHROPIC_API_KEY not set');
+
+// Create client
+$client = new ClaudePhp($apiKey);
+
+// Create a calculator tool
+$calculator = Tool::create('calculator')
+    ->description('Perform basic arithmetic')
+    ->parameter('operation', 'string', 'Operation: add, subtract, multiply, divide')
+    ->parameter('a', 'number', 'First number')
+    ->parameter('b', 'number', 'Second number')
+    ->required('operation', 'a', 'b')
+    ->handler(function (array $input): string {
+        $a = $input['a'];
+        $b = $input['b'];
+        
+        $result = match ($input['operation']) {
+            'add' => $a + $b,
+            'subtract' => $a - $b,
+            'multiply' => $a * $b,
+            'divide' => $b !== 0 ? $a / $b : 'Error: Division by zero',
+            default => 'Error: Unknown operation',
+        };
+        
+        return "Result: {$result}";
+    });
+
+// Create agent
+$agent = Agent::create($client)
+    ->withTool($calculator)
+    ->withSystemPrompt('You are a helpful assistant that can perform calculations.')
+    ->maxIterations(5);
+
+// Execute
+echo "Calculating 25 * 17...\n";
+
+try {
+    $result = $agent->run('What is 25 * 17?');
+    
+    echo "Answer: {$result->getAnswer()}\n";
+    echo "Iterations: {$result->getIterations()}\n";
+    echo "Tokens: {$result->getTotalTokens()}\n";
+    
+} catch (Exception $e) {
+    echo "Error: {$e->getMessage()}\n";
+    exit(1);
+}
+```
+
+### Example Documentation
+
+Each example should:
+- Have a header comment explaining what it demonstrates
+- Be self-contained and runnable
+- Check for required environment variables
+- Handle errors gracefully
+- Show output or results
+
+## README.md Updates
+
+### When to Update README
+
+Update README.md when:
+- Adding new features
+- Adding new agent types
+- Changing API
+- Adding new examples
+- Major version changes
+
+### README Structure
+
+```markdown
+# Project Title
+
+Brief description.
+
+## Features
+
+- Feature list with emojis
+
+## Installation
+
+```bash
+composer require claude-php/agent
+```
+
+## Quick Start
+
+Simple, working example.
+
+## Core Concepts
+
+### Concept 1
+
+Explanation with example.
+
+## Documentation
+
+Link to comprehensive docs.
+
+## Examples
+
+Link to examples directory.
+
+## Contributing
+
+Link to CONTRIBUTING.md.
+
+## License
+
+License information.
+```
+
+## CHANGELOG.md
+
+### Keep CHANGELOG Current
+
+Update CHANGELOG.md for every version:
+
+```markdown
+# Changelog
+
+## [Unreleased]
+
+### Added
+- New feature X
+- New agent type Y
+
+### Changed
+- Updated API for Z
+
+### Fixed
+- Bug fix for issue #123
+
+## [0.8.0] - 2026-01-15
+
+### Added
+- Component validation service
+- Code generation agent
+
+### Changed
+- Enhanced service system
+
+### Deprecated
+- Old validation method
+
+### Removed
+- Deprecated legacy code
+
+### Fixed
+- Critical bug in streaming
+
+### Security
+- Security fix for XSS
+```
+
+### Changelog Format
+
+Follow [Keep a Changelog](https://keepachangelog.com/) format:
+- **Added** - New features
+- **Changed** - Changes in existing functionality
+- **Deprecated** - Soon-to-be removed features
+- **Removed** - Removed features
+- **Fixed** - Bug fixes
+- **Security** - Security fixes
+
+## API Documentation
+
+### Generate API Docs
+
+Use phpDocumentor or similar tools:
+
+```bash
+# Generate API documentation
+vendor/bin/phpdoc -d src -t docs/api
+```
+
+### API Doc Comments
+
+```php
+/**
+ * Agent builder for creating configured agents.
+ *
+ * Provides a fluent interface for constructing agents with
+ * various configuration options, tools, and strategies.
+ *
+ * @api
+ * @since 0.1.0
+ *
+ * @example
+ * ```php
+ * $agent = AgentBuilder::create($client)
+ *     ->withTools([$tool1, $tool2])
+ *     ->withLoopStrategy(new ReactLoop())
+ *     ->build();
+ * ```
+ */
+class AgentBuilder
+{
+    // Implementation
+}
+```
+
+## Documentation Maintenance
+
+### Regular Reviews
+
+- Review docs quarterly
+- Update examples when API changes
+- Check for broken links
+- Verify code examples still work
+- Update version references
+
+### Documentation Testing
+
+```bash
+# Test that all example files run
+for file in examples/**/*.php; do
+    echo "Testing $file"
+    php -l "$file" || echo "Syntax error in $file"
+done
+```
+
+## Markdown Formatting
+
+### Code Blocks
+
+Always specify language:
+
+````markdown
+```php
+// PHP code
+```
+
+```bash
+# Shell commands
+```
+
+```json
+{
+  "config": "value"
+}
+```
+````
+
+### Links
+
+Use reference-style links for maintainability:
+
+```markdown
+See the [Agent documentation][agent-docs] for more details.
+
+[agent-docs]: docs/Agent.md
+```
+
+### Tables
+
+Use tables for structured information:
+
+```markdown
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| ReAct | General tasks | `ReactAgent` |
+| Plan-Execute | Complex workflows | `PlanExecuteAgent` |
+```
+
+## Version Documentation
+
+Document breaking changes clearly:
+
+```markdown
+## Upgrading from v0.7 to v0.8
+
+### Breaking Changes
+
+**ServiceManager API Change**
+
+Before (v0.7):
+```php
+$service = ServiceManager::get('cache');
+```
+
+After (v0.8):
+```php
+$service = ServiceManager::getInstance()->get(ServiceType::CACHE);
+```
+
+### Migration Guide
+
+1. Update all `ServiceManager::get()` calls
+2. Use `ServiceType` enum instead of strings
+3. Register factories before use
+```
+
+## Documentation Checklist
+
+Before committing:
+- [ ] All public APIs have PHPDoc
+- [ ] Examples are runnable
+- [ ] Code examples use latest Claude models
+- [ ] README updated if needed
+- [ ] CHANGELOG updated
+- [ ] Links are valid
+- [ ] Code blocks have language specified
+- [ ] Formatting is consistent
+- [ ] No spelling errors
+
+## References
+
+- [PHPDoc Standard](https://docs.phpdoc.org/)
+- [Keep a Changelog](https://keepachangelog.com/)
+- [Semantic Versioning](https://semver.org/)
+
+## Enforcement
+
+- **Code Review**: Missing/incorrect documentation will be flagged
+- **CI**: Check for missing PHPDoc comments
+- **Documentation PRs**: Separate PRs for major doc updates

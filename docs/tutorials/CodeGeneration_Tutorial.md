@@ -842,7 +842,7 @@ $agent = new CodeGenerationAgent($client, [
 // Use simpler model for faster generation
 $client = new ClaudePhp(
     apiKey: getenv('ANTHROPIC_API_KEY'),
-    model: 'claude-3-haiku-20240307', // Faster model
+    model: 'claude-haiku-4-5', // Faster model
 );
 ```
 

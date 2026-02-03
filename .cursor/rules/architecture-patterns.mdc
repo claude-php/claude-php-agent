@@ -1,0 +1,626 @@
+# Architecture Patterns
+
+Architectural patterns and design principles for the Claude PHP Agent Framework.
+
+## Overview
+
+This framework follows a service-oriented architecture with interface-driven design, factory patterns, dependency injection, and clear separation of concerns.
+
+## Core Architectural Principles
+
+### 1. Interface-Driven Design
+
+All contracts must be defined through interfaces. This enables:
+- Testability through mocking
+- Flexibility in implementations
+- Clear API contracts
+- Type safety
+
+```php
+// ✅ Correct - Define interface first
+namespace ClaudeAgents\Contracts;
+
+interface AgentInterface
+{
+    public function run(string $input): AgentResult;
+    public function withTool(ToolInterface $tool): self;
+    public function getName(): string;
+}
+
+// Then implement
+namespace ClaudeAgents\Agents;
+
+class ReactAgent implements AgentInterface
+{
+    public function run(string $input): AgentResult
+    {
+        // Implementation
+    }
+    
+    // ... other methods
+}
+```
+
+### Key Interfaces
+
+- `AgentInterface` - All agents must implement this
+- `ToolInterface` - All tools must implement this
+- `LoopStrategyInterface` - All loop strategies
+- `MemoryInterface` - All memory implementations
+- `ServiceInterface` - All services
+- `ValidatorInterface` - All validators
+- `ParserInterface` - All output parsers
+
+### 2. Separation of Concerns
+
+Organize code into distinct layers with clear responsibilities:
+
+```
+src/
+├── Agents/          # Agent implementations (business logic)
+├── Tools/           # Tool implementations (actions)
+├── Loops/           # Loop strategies (execution patterns)
+├── Services/        # Enterprise services (infrastructure)
+├── Memory/          # Memory management (state)
+├── Contracts/       # Interfaces (contracts)
+├── Config/          # Configuration (settings)
+├── Exceptions/      # Custom exceptions (errors)
+├── Events/          # Event system (notifications)
+└── Support/         # Utilities and helpers
+```
+
+#### Layer Responsibilities
+
+**Agents Layer** (High-level business logic):
+```php
+namespace ClaudeAgents\Agents;
+
+// Orchestrates tools, loops, and services
+class CodeGenerationAgent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly ValidationCoordinator $validator
+    ) {}
+    
+    public function generate(string $specification): ComponentResult
+    {
+        // High-level workflow orchestration
+    }
+}
+```
+
+**Services Layer** (Infrastructure):
+```php
+namespace ClaudeAgents\Services\Cache;
+
+// Low-level infrastructure concerns
+class CacheService implements ServiceInterface
+{
+    public function get(string $key): mixed
+    {
+        // Cache implementation details
+    }
+}
+```
+
+**Tools Layer** (Specific actions):
+```php
+namespace ClaudeAgents\Tools;
+
+// Discrete, reusable actions
+class Calculator implements ToolInterface
+{
+    public function execute(array $input): ToolResult
+    {
+        // Single-purpose tool logic
+    }
+}
+```
+
+### 3. Factory Pattern
+
+Use factories for complex object creation:
+
+```php
+// ✅ Correct - Factory for complex creation
+namespace ClaudeAgents\Factory;
+
+class AgentFactory
+{
+    public function createReactAgent(
+        ClaudePhp $client,
+        array $tools = [],
+        ?AgentConfig $config = null
+    ): ReactAgent {
+        $config ??= AgentConfig::default();
+        
+        $agent = new ReactAgent($client, $config);
+        
+        foreach ($tools as $tool) {
+            $agent->addTool($tool);
+        }
+        
+        return $agent;
+    }
+}
+
+// Usage
+$agent = $factory->createReactAgent($client, [$calculatorTool, $searchTool]);
+```
+
+#### Service Factories
+
+Every service must have a corresponding factory:
+
+```php
+namespace ClaudeAgents\Services\Cache;
+
+use ClaudeAgents\Services\ServiceFactory;
+use ClaudeAgents\Services\ServiceInterface;
+
+class CacheServiceFactory implements ServiceFactory
+{
+    public function create(array $config = []): ServiceInterface
+    {
+        $driver = $config['driver'] ?? 'array';
+        
+        return match ($driver) {
+            'redis' => new RedisCache($config),
+            'file' => new FileCache($config),
+            default => new ArrayCache(),
+        };
+    }
+    
+    public function getServiceType(): string
+    {
+        return 'cache';
+    }
+}
+```
+
+### 4. Dependency Injection
+
+Inject dependencies through constructors, not global state:
+
+```php
+// ✅ Correct - Constructor injection
+class ReactAgent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly ToolRegistry $tools,
+        private readonly AgentConfig $config,
+        private readonly ?LoggerInterface $logger = null
+    ) {
+        $this->logger ??= new NullLogger();
+    }
+}
+
+// ❌ Incorrect - Service locator / global state
+class ReactAgent
+{
+    private ClaudePhp $client;
+    
+    public function __construct()
+    {
+        $this->client = ServiceContainer::get('claude_client');
+    }
+}
+```
+
+#### ServiceManager for Services
+
+Use ServiceManager for framework services (special case):
+
+```php
+// ✅ Correct - ServiceManager for services only
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\ServiceType;
+
+$manager = ServiceManager::getInstance();
+$cache = $manager->get(ServiceType::CACHE);
+$tracing = $manager->get(ServiceType::TRACING);
+
+// ❌ Incorrect - ServiceManager for agents
+$agent = $manager->get('react_agent');  // Don't do this
+```
+
+### 5. Fluent Builder Pattern
+
+Public APIs should support method chaining:
+
+```php
+// ✅ Correct - Fluent interface
+class Agent
+{
+    public function withTool(ToolInterface $tool): self
+    {
+        $this->tools->register($tool);
+        return $this;
+    }
+    
+    public function withSystemPrompt(string $prompt): self
+    {
+        $this->config->setSystemPrompt($prompt);
+        return $this;
+    }
+    
+    public function maxIterations(int $max): self
+    {
+        $this->config->setMaxIterations($max);
+        return $this;
+    }
+}
+
+// Usage - Chain calls fluently
+$agent = Agent::create($client)
+    ->withTool($calculator)
+    ->withTool($search)
+    ->withSystemPrompt('You are a helpful assistant')
+    ->maxIterations(10)
+    ->run('Calculate 25 * 17');
+```
+
+### 6. Event-Driven Architecture
+
+Use events for cross-cutting concerns:
+
+```php
+// ✅ Correct - Event emission
+class StreamingFlowExecutor
+{
+    private FlowEventManager $eventManager;
+    
+    public function executeWithStreaming(
+        AgentInterface $agent,
+        string $task
+    ): Generator {
+        // Emit flow started event
+        $this->eventManager->emit('flow.started', [
+            'agent' => $agent->getName(),
+            'task' => $task,
+        ]);
+        
+        // Execute and emit progress
+        foreach ($this->execute($agent, $task) as $step) {
+            $this->eventManager->emit('progress.update', [
+                'percent' => $step->getProgress(),
+            ]);
+            
+            yield $step;
+        }
+        
+        // Emit completion
+        $this->eventManager->emit('flow.completed', [
+            'duration' => $this->getDuration(),
+        ]);
+    }
+}
+```
+
+## Design Patterns in Use
+
+### 1. Strategy Pattern (Loop Strategies)
+
+```php
+// Interface defines the strategy
+interface LoopStrategyInterface
+{
+    public function execute(Agent $agent, string $input): AgentResult;
+}
+
+// Concrete strategies
+class ReactLoop implements LoopStrategyInterface
+{
+    public function execute(Agent $agent, string $input): AgentResult
+    {
+        // ReAct implementation
+    }
+}
+
+class PlanExecuteLoop implements LoopStrategyInterface
+{
+    public function execute(Agent $agent, string $input): AgentResult
+    {
+        // Plan-Execute implementation
+    }
+}
+
+// Usage - Strategy is interchangeable
+$agent->withLoopStrategy(new ReactLoop());
+$agent->withLoopStrategy(new PlanExecuteLoop());
+```
+
+### 2. Registry Pattern (Tools, Agents)
+
+```php
+class ToolRegistry
+{
+    private array $tools = [];
+    
+    public function register(ToolInterface $tool): void
+    {
+        $this->tools[$tool->getName()] = $tool;
+    }
+    
+    public function get(string $name): ?ToolInterface
+    {
+        return $this->tools[$name] ?? null;
+    }
+    
+    public function all(): array
+    {
+        return $this->tools;
+    }
+}
+```
+
+### 3. Singleton Pattern (ServiceManager)
+
+```php
+// ✅ Correct - Singleton for ServiceManager only
+class ServiceManager
+{
+    private static ?self $instance = null;
+    private array $services = [];
+    
+    private function __construct()
+    {
+        // Private constructor
+    }
+    
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        
+        return self::$instance;
+    }
+}
+
+// ❌ Incorrect - Don't make agents singletons
+class ReactAgent
+{
+    private static ?self $instance = null;  // No!
+}
+```
+
+### 4. Observer Pattern (Events)
+
+```php
+class FlowEventManager
+{
+    private array $listeners = [];
+    
+    public function subscribe(callable $listener): string
+    {
+        $id = uniqid('listener_', true);
+        $this->listeners[$id] = $listener;
+        return $id;
+    }
+    
+    public function emit(string $eventType, array $data): void
+    {
+        $event = new FlowEvent($eventType, $data);
+        
+        foreach ($this->listeners as $listener) {
+            $listener($event);
+        }
+    }
+}
+```
+
+### 5. Chain of Responsibility (Validators)
+
+```php
+class ValidationCoordinator
+{
+    private array $validators = [];
+    
+    public function addValidator(ValidatorInterface $validator): self
+    {
+        $this->validators[] = $validator;
+        return $this;
+    }
+    
+    public function validate(string $code): ValidationResult
+    {
+        foreach ($this->validators as $validator) {
+            $result = $validator->validate($code);
+            
+            if (!$result->isValid()) {
+                return $result;
+            }
+        }
+        
+        return ValidationResult::success();
+    }
+}
+```
+
+### 6. Template Method Pattern (Abstract Agents)
+
+```php
+abstract class AbstractAgent implements AgentInterface
+{
+    // Template method
+    public function run(string $input): AgentResult
+    {
+        $this->beforeRun($input);
+        
+        try {
+            $result = $this->execute($input);
+            $this->afterRun($result);
+            return $result;
+        } catch (Throwable $e) {
+            $this->onError($e);
+            throw $e;
+        }
+    }
+    
+    // Hooks for subclasses
+    protected function beforeRun(string $input): void {}
+    protected function afterRun(AgentResult $result): void {}
+    protected function onError(Throwable $e): void {}
+    
+    // Abstract method - must be implemented
+    abstract protected function execute(string $input): AgentResult;
+}
+```
+
+## Anti-Patterns to Avoid
+
+### 1. God Objects
+
+```php
+// ❌ Incorrect - Too many responsibilities
+class AgentManager
+{
+    public function createAgent() {}
+    public function executeAgent() {}
+    public function validateAgent() {}
+    public function cacheResults() {}
+    public function logErrors() {}
+    public function sendMetrics() {}
+    // ... 20 more methods
+}
+
+// ✅ Correct - Single responsibility
+class AgentFactory
+{
+    public function create(): Agent {}
+}
+
+class AgentExecutor
+{
+    public function execute(Agent $agent): AgentResult {}
+}
+```
+
+### 2. Tight Coupling
+
+```php
+// ❌ Incorrect - Tight coupling to concrete class
+class Agent
+{
+    private RedisCache $cache;  // Coupled to Redis
+    
+    public function __construct()
+    {
+        $this->cache = new RedisCache();
+    }
+}
+
+// ✅ Correct - Depend on interface
+class Agent
+{
+    public function __construct(
+        private readonly CacheInterface $cache
+    ) {}
+}
+```
+
+### 3. Feature Envy
+
+```php
+// ❌ Incorrect - Reaching into other objects
+class Agent
+{
+    public function execute(Tool $tool): void
+    {
+        if ($tool->getConfig()->getTimeout() > 30) {
+            $tool->getConfig()->setTimeout(30);
+        }
+    }
+}
+
+// ✅ Correct - Tell, don't ask
+class Agent
+{
+    public function execute(Tool $tool): void
+    {
+        $tool->ensureReasonableTimeout(30);
+    }
+}
+```
+
+### 4. Static Cling
+
+```php
+// ❌ Incorrect - Static methods everywhere
+class Helper
+{
+    public static function formatResult($result) {}
+    public static function validateInput($input) {}
+}
+
+// ✅ Correct - Injectable services
+class ResultFormatter
+{
+    public function format(AgentResult $result): string {}
+}
+
+class InputValidator
+{
+    public function validate(string $input): bool {}
+}
+```
+
+## Testing Considerations
+
+### Testable Architecture
+
+```php
+// ✅ Correct - Easy to test with mocks
+class Agent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly ToolRegistry $tools
+    ) {}
+}
+
+// In tests
+$mockClient = Mockery::mock(ClaudePhp::class);
+$mockTools = Mockery::mock(ToolRegistry::class);
+$agent = new Agent($mockClient, $mockTools);
+```
+
+### Avoid Hard-to-Test Code
+
+```php
+// ❌ Incorrect - Hard to test (creates dependencies)
+class Agent
+{
+    private ClaudePhp $client;
+    
+    public function __construct()
+    {
+        $this->client = new ClaudePhp(getenv('API_KEY'));
+    }
+}
+
+// ✅ Correct - Easy to test
+class Agent
+{
+    public function __construct(
+        private readonly ClaudePhp $client
+    ) {}
+}
+```
+
+## References
+
+- [SOLID Principles](https://en.wikipedia.org/wiki/SOLID)
+- [Design Patterns (Gang of Four)](https://refactoring.guru/design-patterns)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Dependency Injection in PHP](https://www.php-fig.org/psr/psr-11/)
+
+## Enforcement
+
+- **Code Review**: Architecture violations will be flagged
+- **Testing**: Ensure new code is testable
+- **Documentation**: Document architectural decisions
+- **Refactoring**: Improve architecture incrementally

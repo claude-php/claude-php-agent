@@ -1,0 +1,783 @@
+# Services and Dependency Injection
+
+Service system architecture, ServiceManager usage, and dependency injection patterns.
+
+## Overview
+
+The framework uses a service-oriented architecture with a central ServiceManager for dependency injection. Services are registered via factories and accessed through type-safe enums.
+
+## Service System Architecture
+
+### Core Components
+
+1. **ServiceManager** - Singleton registry for services
+2. **ServiceFactory** - Creates service instances
+3. **ServiceInterface** - Contract all services implement
+4. **ServiceType** - Enum for type-safe service identification
+
+```
+┌─────────────────────────────────────────┐
+│         ServiceManager                  │
+│         (Singleton)                     │
+├─────────────────────────────────────────┤
+│ - Register factories                    │
+│ - Get service instances                 │
+│ - Manage service lifecycle              │
+└─────────────────────────────────────────┘
+              │
+              ├──► CacheService
+              ├──► TracingService
+              ├──► TelemetryService
+              ├──► StorageService
+              └──► ...
+```
+
+## ServiceManager Usage
+
+### Getting the ServiceManager
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+
+// ✅ Correct - Get singleton instance
+$manager = ServiceManager::getInstance();
+
+// ❌ Incorrect - Don't instantiate
+$manager = new ServiceManager();  // Constructor is private
+```
+
+### Registering Services
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\Cache\CacheServiceFactory;
+use ClaudeAgents\Services\Tracing\TracingServiceFactory;
+
+$manager = ServiceManager::getInstance();
+
+// Register factories
+$manager
+    ->registerFactory(new CacheServiceFactory())
+    ->registerFactory(new TracingServiceFactory())
+    ->registerFactory(new TelemetryServiceFactory());
+```
+
+### Getting Services
+
+```php
+use ClaudeAgents\Services\ServiceType;
+
+// ✅ Correct - Use ServiceType enum
+$cache = $manager->get(ServiceType::CACHE);
+$tracing = $manager->get(ServiceType::TRACING);
+$telemetry = $manager->get(ServiceType::TELEMETRY);
+
+// ❌ Incorrect - Don't use strings
+$cache = $manager->get('cache');  // Won't work
+```
+
+## Service Interface
+
+### Required Implementation
+
+All services must implement `ServiceInterface`:
+
+```php
+namespace ClaudeAgents\Services;
+
+interface ServiceInterface
+{
+    /**
+     * Get service name.
+     */
+    public function getName(): string;
+    
+    /**
+     * Check if service is enabled.
+     */
+    public function isEnabled(): bool;
+    
+    /**
+     * Get service configuration.
+     */
+    public function getConfig(): array;
+}
+```
+
+### Example Service
+
+```php
+namespace ClaudeAgents\Services\Cache;
+
+use ClaudeAgents\Services\ServiceInterface;
+
+class CacheService implements ServiceInterface
+{
+    private bool $enabled;
+    private array $config;
+    
+    public function __construct(array $config = [])
+    {
+        $this->config = $config;
+        $this->enabled = $config['enabled'] ?? true;
+    }
+    
+    public function getName(): string
+    {
+        return 'cache';
+    }
+    
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+    
+    public function getConfig(): array
+    {
+        return $this->config;
+    }
+    
+    // Service-specific methods
+    public function get(string $key): mixed
+    {
+        // Implementation
+    }
+    
+    public function set(string $key, mixed $value, int $ttl = 3600): void
+    {
+        // Implementation
+    }
+}
+```
+
+## Service Factories
+
+### Factory Interface
+
+```php
+namespace ClaudeAgents\Services;
+
+interface ServiceFactory
+{
+    /**
+     * Create service instance.
+     */
+    public function create(array $config = []): ServiceInterface;
+    
+    /**
+     * Get service type this factory creates.
+     */
+    public function getServiceType(): string;
+}
+```
+
+### Creating a Service Factory
+
+```php
+namespace ClaudeAgents\Services\Cache;
+
+use ClaudeAgents\Services\ServiceFactory;
+use ClaudeAgents\Services\ServiceInterface;
+
+class CacheServiceFactory implements ServiceFactory
+{
+    public function create(array $config = []): ServiceInterface
+    {
+        // Read configuration
+        $driver = $config['driver'] ?? 'array';
+        
+        // Create appropriate implementation
+        return match ($driver) {
+            'redis' => new RedisCache($config),
+            'file' => new FileCache($config),
+            'array' => new ArrayCache($config),
+            default => throw new \InvalidArgumentException("Unknown cache driver: {$driver}")
+        };
+    }
+    
+    public function getServiceType(): string
+    {
+        return 'cache';
+    }
+}
+```
+
+### Factory Registration
+
+```php
+// ✅ Correct - Register during bootstrap
+$manager = ServiceManager::getInstance();
+
+$manager->registerFactory(new CacheServiceFactory());
+$manager->registerFactory(new TracingServiceFactory());
+$manager->registerFactory(new TelemetryServiceFactory());
+$manager->registerFactory(new StorageServiceFactory());
+
+// Now services are available
+$cache = $manager->get(ServiceType::CACHE);
+```
+
+## ServiceType Enum
+
+### Current Service Types
+
+```php
+namespace ClaudeAgents\Services;
+
+enum ServiceType: string
+{
+    case CACHE = 'cache';
+    case TRACING = 'tracing';
+    case TELEMETRY = 'telemetry';
+    case STORAGE = 'storage';
+    case SESSION = 'session';
+    case SETTINGS = 'settings';
+    case VARIABLE = 'variable';
+    case TRANSACTION = 'transaction';
+    case FLOW_EXECUTOR = 'flow_executor';
+    case EVENT_MANAGER = 'event_manager';
+}
+```
+
+### Adding New Service Types
+
+When adding a new service:
+
+1. Add to `ServiceType` enum
+2. Create service class implementing `ServiceInterface`
+3. Create factory implementing `ServiceFactory`
+4. Register factory with ServiceManager
+
+```php
+// 1. Add to enum
+enum ServiceType: string
+{
+    // ... existing types
+    case QUEUE = 'queue';  // New service type
+}
+
+// 2. Create service
+class QueueService implements ServiceInterface
+{
+    // Implementation
+}
+
+// 3. Create factory
+class QueueServiceFactory implements ServiceFactory
+{
+    public function create(array $config = []): ServiceInterface
+    {
+        return new QueueService($config);
+    }
+    
+    public function getServiceType(): string
+    {
+        return ServiceType::QUEUE->value;
+    }
+}
+
+// 4. Register
+$manager->registerFactory(new QueueServiceFactory());
+```
+
+## Service Configuration
+
+### Configuration Files
+
+Services read configuration from `config/services.php`:
+
+```php
+// config/services.php
+return [
+    'cache' => [
+        'enabled' => true,
+        'driver' => 'redis',
+        'redis' => [
+            'host' => getenv('REDIS_HOST') ?: 'localhost',
+            'port' => (int) getenv('REDIS_PORT') ?: 6379,
+        ],
+    ],
+    
+    'tracing' => [
+        'enabled' => true,
+        'providers' => ['langsmith'],
+        'langsmith' => [
+            'api_key' => getenv('LANGSMITH_API_KEY'),
+            'project' => getenv('LANGCHAIN_PROJECT') ?: 'default',
+        ],
+    ],
+    
+    'telemetry' => [
+        'enabled' => true,
+        'otlp' => [
+            'endpoint' => 'http://localhost:4318',
+        ],
+    ],
+];
+```
+
+### Loading Configuration
+
+```php
+// Load config
+$config = require __DIR__ . '/config/services.php';
+
+// Pass to factory during registration
+$manager->registerFactory(
+    new CacheServiceFactory(),
+    $config['cache'] ?? []
+);
+```
+
+## Dependency Injection Patterns
+
+### Constructor Injection (Preferred)
+
+```php
+// ✅ Correct - Inject dependencies
+class CodeGenerationAgent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly CacheService $cache,
+        private readonly TracingService $tracing,
+        private readonly ValidationCoordinator $validator
+    ) {}
+    
+    public function generate(string $spec): ComponentResult
+    {
+        // Use injected dependencies
+        $cached = $this->cache->get("spec:{$spec}");
+        
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        $this->tracing->startTrace('generation', ['spec' => $spec]);
+        
+        // Generate code...
+        
+        $this->tracing->endTrace('generation');
+        
+        return $result;
+    }
+}
+
+// Usage
+$agent = new CodeGenerationAgent(
+    client: $client,
+    cache: $manager->get(ServiceType::CACHE),
+    tracing: $manager->get(ServiceType::TRACING),
+    validator: $validator
+);
+```
+
+### Service Locator (For Services Only)
+
+```php
+// ✅ Acceptable - For services in framework code
+class StreamingFlowExecutor
+{
+    private FlowEventManager $eventManager;
+    
+    public function __construct(?FlowEventManager $eventManager = null)
+    {
+        // Allow injection OR use ServiceManager
+        $this->eventManager = $eventManager 
+            ?? ServiceManager::getInstance()->get(ServiceType::EVENT_MANAGER);
+    }
+}
+
+// ❌ Incorrect - Don't use for business objects
+class Agent
+{
+    public function __construct()
+    {
+        // Don't do this - inject dependencies instead
+        $this->cache = ServiceManager::getInstance()->get(ServiceType::CACHE);
+    }
+}
+```
+
+## Service Lifecycle
+
+### Singleton Services (Default)
+
+By default, ServiceManager returns the same instance:
+
+```php
+$cache1 = $manager->get(ServiceType::CACHE);
+$cache2 = $manager->get(ServiceType::CACHE);
+
+// Same instance
+assert($cache1 === $cache2);
+```
+
+### New Instances
+
+Create new instances by calling factory directly:
+
+```php
+$factory = new CacheServiceFactory();
+
+$cache1 = $factory->create(['driver' => 'redis']);
+$cache2 = $factory->create(['driver' => 'array']);
+
+// Different instances
+assert($cache1 !== $cache2);
+```
+
+## Service Patterns
+
+### Pattern: Service with Fallback
+
+```php
+class CacheService implements ServiceInterface
+{
+    private ?CacheDriver $primary = null;
+    private ?CacheDriver $fallback = null;
+    
+    public function __construct(array $config = [])
+    {
+        try {
+            $this->primary = new RedisCache($config);
+        } catch (\Exception $e) {
+            // Redis not available, use fallback
+            $this->fallback = new FileCache($config);
+        }
+    }
+    
+    public function get(string $key): mixed
+    {
+        try {
+            return $this->primary?->get($key) 
+                ?? $this->fallback?->get($key);
+        } catch (\Exception $e) {
+            // Log error
+            return $this->fallback?->get($key);
+        }
+    }
+}
+```
+
+### Pattern: Lazy Service Loading
+
+```php
+class LazyService implements ServiceInterface
+{
+    private ?ExpensiveResource $resource = null;
+    
+    private function getResource(): ExpensiveResource
+    {
+        if ($this->resource === null) {
+            $this->resource = new ExpensiveResource();
+        }
+        
+        return $this->resource;
+    }
+    
+    public function doWork(): void
+    {
+        // Resource only loaded when needed
+        $this->getResource()->execute();
+    }
+}
+```
+
+### Pattern: Service Composition
+
+```php
+class ObservableAgent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly CacheService $cache,
+        private readonly TracingService $tracing,
+        private readonly TelemetryService $telemetry
+    ) {}
+    
+    public function run(string $input): AgentResult
+    {
+        $traceId = uniqid('agent_', true);
+        
+        // Check cache
+        $cached = $this->cache->get("input:{$input}");
+        if ($cached !== null) {
+            $this->telemetry->recordCounter('cache.hits');
+            return $cached;
+        }
+        
+        // Start tracing
+        $this->tracing->startTrace($traceId, 'agent.run');
+        
+        // Execute agent
+        $result = $this->execute($input);
+        
+        // Record telemetry
+        $this->telemetry->recordAgentRequest(
+            success: true,
+            tokensInput: $result->getInputTokens(),
+            tokensOutput: $result->getOutputTokens(),
+            duration: $result->getDuration()
+        );
+        
+        // End trace
+        $this->tracing->endTrace($traceId);
+        
+        // Cache result
+        $this->cache->set("input:{$input}", $result, 3600);
+        
+        return $result;
+    }
+}
+```
+
+## Service Testing
+
+### Mocking Services
+
+```php
+use Mockery;
+use ClaudeAgents\Services\Cache\CacheService;
+
+class AgentTest extends TestCase
+{
+    public function test_agent_uses_cache(): void
+    {
+        // Mock cache service
+        $cache = Mockery::mock(CacheService::class);
+        $cache->shouldReceive('get')
+            ->once()
+            ->with('key')
+            ->andReturn('cached_value');
+        
+        $cache->shouldReceive('set')
+            ->once()
+            ->with('key', 'new_value', 3600);
+        
+        // Inject mock
+        $agent = new Agent($client, $cache);
+        
+        // Test uses mock
+        $result = $agent->run('test');
+        
+        $this->assertNotNull($result);
+    }
+}
+```
+
+### Test Service Manager
+
+```php
+class ServiceManagerTest extends TestCase
+{
+    private ServiceManager $manager;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Get clean instance for testing
+        $this->manager = ServiceManager::getInstance();
+        
+        // Register test factories
+        $this->manager->registerFactory(new CacheServiceFactory());
+    }
+    
+    public function test_service_manager_returns_service(): void
+    {
+        $service = $this->manager->get(ServiceType::CACHE);
+        
+        $this->assertInstanceOf(ServiceInterface::class, $service);
+    }
+}
+```
+
+## Best Practices
+
+### 1. Use ServiceManager for Services Only
+
+```php
+// ✅ Good - Services from ServiceManager
+$cache = ServiceManager::getInstance()->get(ServiceType::CACHE);
+$tracing = ServiceManager::getInstance()->get(ServiceType::TRACING);
+
+// ✅ Good - Business objects via DI
+$agent = new ReactAgent(
+    client: $client,
+    config: $config
+);
+
+// ❌ Bad - Don't put business objects in ServiceManager
+$agent = ServiceManager::getInstance()->get('react_agent');
+```
+
+### 2. Keep Services Stateless
+
+```php
+// ✅ Good - Stateless service
+class CacheService
+{
+    public function get(string $key): mixed
+    {
+        return $this->driver->get($key);
+    }
+}
+
+// ❌ Bad - Stateful service
+class CacheService
+{
+    private array $requestCache = [];  // Request-specific state
+    
+    public function get(string $key): mixed
+    {
+        // Don't store per-request state in singleton service
+        $this->requestCache[$key] = $value;
+    }
+}
+```
+
+### 3. Configure via Constructor
+
+```php
+// ✅ Good - Configuration via constructor
+class CacheService implements ServiceInterface
+{
+    public function __construct(
+        private readonly array $config = []
+    ) {
+        $this->driver = $this->createDriver($config);
+    }
+}
+
+// ❌ Bad - Configuration via setter
+class CacheService implements ServiceInterface
+{
+    public function setConfig(array $config): void
+    {
+        // Mutable configuration is problematic
+    }
+}
+```
+
+### 4. Use Factory Pattern
+
+```php
+// ✅ Good - Factory creates configured instances
+class CacheServiceFactory implements ServiceFactory
+{
+    public function create(array $config = []): ServiceInterface
+    {
+        $driver = $config['driver'] ?? 'array';
+        
+        return match ($driver) {
+            'redis' => new RedisCache($config),
+            'file' => new FileCache($config),
+            default => new ArrayCache($config),
+        };
+    }
+}
+```
+
+### 5. Validate Configuration
+
+```php
+// ✅ Good - Validate early
+class TracingService implements ServiceInterface
+{
+    public function __construct(array $config = [])
+    {
+        if (!isset($config['providers'])) {
+            throw new \InvalidArgumentException('Tracing providers not configured');
+        }
+        
+        if (empty($config['langsmith']['api_key'])) {
+            throw new \InvalidArgumentException('LangSmith API key required');
+        }
+        
+        $this->initialize($config);
+    }
+}
+```
+
+## Common Patterns
+
+### Registering All Services at Bootstrap
+
+```php
+// bootstrap.php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\Cache\CacheServiceFactory;
+use ClaudeAgents\Services\Tracing\TracingServiceFactory;
+use ClaudeAgents\Services\Telemetry\TelemetryServiceFactory;
+
+function bootstrapServices(): ServiceManager
+{
+    $manager = ServiceManager::getInstance();
+    
+    // Register all service factories
+    $manager
+        ->registerFactory(new CacheServiceFactory())
+        ->registerFactory(new TracingServiceFactory())
+        ->registerFactory(new TelemetryServiceFactory())
+        ->registerFactory(new StorageServiceFactory())
+        ->registerFactory(new SessionServiceFactory())
+        ->registerFactory(new SettingsServiceFactory());
+    
+    return $manager;
+}
+
+// In your app
+$services = bootstrapServices();
+```
+
+### Optional Service Dependencies
+
+```php
+class Agent
+{
+    public function __construct(
+        private readonly ClaudePhp $client,
+        private readonly ?CacheService $cache = null,
+        private readonly ?TracingService $tracing = null
+    ) {}
+    
+    public function run(string $input): AgentResult
+    {
+        // Use if available
+        if ($this->cache !== null) {
+            $cached = $this->cache->get("input:{$input}");
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+        
+        // Trace if available
+        $this->tracing?->startTrace('agent.run');
+        
+        $result = $this->execute($input);
+        
+        $this->tracing?->endTrace('agent.run');
+        
+        return $result;
+    }
+}
+```
+
+## Quick Reference
+
+| Concept | Pattern | Example |
+|---------|---------|---------|
+| Get ServiceManager | Singleton | `ServiceManager::getInstance()` |
+| Register Service | Factory | `$manager->registerFactory(new Factory())` |
+| Get Service | Type enum | `$manager->get(ServiceType::CACHE)` |
+| Create Service | Implement interface | `class X implements ServiceInterface` |
+| Create Factory | Implement interface | `class XFactory implements ServiceFactory` |
+| Configure Service | Constructor | `new Service($config)` |
+| Inject Service | Constructor param | `function __construct(Service $s)` |
+
+## References
+
+- [Services Documentation](../docs/services/README.md)
+- [Service Implementation Summary](../docs/services/IMPLEMENTATION_SUMMARY.md)
+- [Services Tutorial](../docs/tutorials/ServicesSystem_Tutorial.md)

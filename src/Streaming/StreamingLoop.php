@@ -7,6 +7,8 @@ namespace ClaudeAgents\Streaming;
 use ClaudeAgents\AgentContext;
 use ClaudeAgents\Contracts\CallbackSupportingLoopInterface;
 use ClaudeAgents\Contracts\StreamHandlerInterface;
+use ClaudeAgents\Events\FlowEvent;
+use ClaudeAgents\Events\FlowEventManager;
 use ClaudeAgents\Tools\ToolResult;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -36,9 +38,23 @@ class StreamingLoop implements CallbackSupportingLoopInterface
      */
     private $onToolExecution = null;
 
+    private ?FlowEventManager $flowEventManager = null;
+
     public function __construct(?LoggerInterface $logger = null)
     {
         $this->logger = $logger ?? new NullLogger();
+    }
+
+    /**
+     * Set the flow event manager for enhanced event tracking.
+     *
+     * @param FlowEventManager $eventManager Event manager instance
+     * @return self
+     */
+    public function setFlowEventManager(FlowEventManager $eventManager): self
+    {
+        $this->flowEventManager = $eventManager;
+        return $this;
     }
 
     /**
@@ -98,6 +114,13 @@ class StreamingLoop implements CallbackSupportingLoopInterface
 
             $this->logger->debug("Streaming ReAct loop iteration {$iteration}");
 
+            // Emit iteration started event
+            if ($this->flowEventManager) {
+                $this->flowEventManager->emit(FlowEvent::ITERATION_STARTED, [
+                    'iteration' => $iteration,
+                ]);
+            }
+
             try {
                 // Build API request parameters
                 $params = array_merge(
@@ -142,6 +165,17 @@ class StreamingLoop implements CallbackSupportingLoopInterface
                 // Fire iteration callback
                 if ($this->onIteration !== null) {
                     ($this->onIteration)($iteration, $response, $context);
+                }
+
+                // Emit iteration completed event
+                if ($this->flowEventManager) {
+                    $this->flowEventManager->emit(FlowEvent::ITERATION_COMPLETED, [
+                        'iteration' => $iteration,
+                        'tokens' => [
+                            'input' => $response->usage->input_tokens ?? 0,
+                            'output' => $response->usage->output_tokens ?? 0,
+                        ],
+                    ]);
                 }
 
                 // Add assistant response to messages
@@ -207,6 +241,14 @@ class StreamingLoop implements CallbackSupportingLoopInterface
         if (is_object($event) && isset($event->delta) && isset($event->delta->text)) {
             $streamEvent = StreamEvent::delta($event->delta->text);
             $buffer->addText($event->delta->text);
+
+            // Emit token event to flow event manager
+            if ($this->flowEventManager) {
+                $this->flowEventManager->emit(FlowEvent::TOKEN_RECEIVED, [
+                    'token' => $event->delta->text,
+                    'iteration' => $context->getIteration(),
+                ]);
+            }
         } else {
             $streamEvent = StreamEvent::text('');
         }
@@ -275,6 +317,14 @@ class StreamingLoop implements CallbackSupportingLoopInterface
 
             $this->logger->debug("Executing tool: {$toolName}", ['input' => $toolInput]);
 
+            // Emit tool execution started event
+            if ($this->flowEventManager) {
+                $this->flowEventManager->emit(FlowEvent::TOOL_EXECUTION_STARTED, [
+                    'tool' => $toolName,
+                    'input' => $toolInput,
+                ]);
+            }
+
             $tool = $context->getTool($toolName);
 
             if ($tool === null) {
@@ -294,6 +344,15 @@ class StreamingLoop implements CallbackSupportingLoopInterface
             // Fire tool execution callback
             if ($this->onToolExecution !== null) {
                 ($this->onToolExecution)($toolName, $toolInput, $result);
+            }
+
+            // Emit tool execution completed event
+            if ($this->flowEventManager) {
+                $this->flowEventManager->emit(FlowEvent::TOOL_EXECUTION_COMPLETED, [
+                    'tool' => $toolName,
+                    'result' => $result->getContent(),
+                    'is_error' => $result->isError(),
+                ]);
             }
 
             $results[] = $result->toApiFormat($toolId);

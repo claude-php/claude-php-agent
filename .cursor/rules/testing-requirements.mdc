@@ -1,0 +1,675 @@
+# Testing Requirements
+
+Testing standards, structure, and requirements for ensuring code quality and reliability.
+
+## Overview
+
+All new features and bug fixes must include comprehensive tests. This project uses PHPUnit with separate Unit and Integration test suites.
+
+## Testing Principles
+
+1. **Test Coverage**: Aim for high coverage, especially for business logic
+2. **Fast Tests**: Unit tests should run in milliseconds
+3. **Isolation**: Tests should be independent and not affect each other
+4. **Readability**: Tests are documentation - make them clear
+5. **Maintainability**: Tests should be easy to update
+
+## Test Structure
+
+### Directory Organization
+
+```
+tests/
+├── Unit/                    # Unit tests (fast, isolated)
+│   ├── Agents/
+│   ├── Services/
+│   ├── Tools/
+│   └── ...
+├── Integration/             # Integration tests (slower, system components)
+│   ├── Agents/
+│   ├── MCP/
+│   └── ...
+└── Feature/                 # Feature tests (end-to-end workflows)
+    ├── CodeGenerationWorkflowTest.php
+    └── ValidationWorkflowTest.php
+```
+
+### Test Types
+
+**Unit Tests** - Test single class in isolation:
+```php
+// tests/Unit/Agents/ReactAgentTest.php
+namespace ClaudeAgents\Tests\Unit\Agents;
+
+use ClaudeAgents\Agents\ReactAgent;
+use Mockery;
+use PHPUnit\Framework\TestCase;
+
+class ReactAgentTest extends TestCase
+{
+    public function test_it_creates_agent_with_default_config(): void
+    {
+        $client = Mockery::mock(ClaudePhp::class);
+        $agent = new ReactAgent($client);
+        
+        $this->assertEquals('react_agent', $agent->getName());
+    }
+}
+```
+
+**Integration Tests** - Test multiple components together:
+```php
+// tests/Integration/Agents/AgentExecutionIntegrationTest.php
+namespace ClaudeAgents\Tests\Integration\Agents;
+
+class AgentExecutionIntegrationTest extends TestCase
+{
+    public function test_agent_executes_with_real_tools(): void
+    {
+        $client = $this->createTestClient();
+        $agent = new ReactAgent($client);
+        $agent->addTool(new Calculator());
+        
+        $result = $agent->run('Calculate 5 + 3');
+        
+        $this->assertTrue($result->isSuccessful());
+    }
+}
+```
+
+**Feature Tests** - Test complete user workflows:
+```php
+// tests/Feature/CodeGenerationWorkflowTest.php
+namespace ClaudeAgents\Tests\Feature;
+
+class CodeGenerationWorkflowTest extends TestCase
+{
+    public function test_complete_code_generation_workflow(): void
+    {
+        // Setup entire workflow
+        // Execute end-to-end
+        // Verify complete feature works
+    }
+}
+```
+
+## Test Naming
+
+### Test Class Names
+
+```php
+// ✅ Correct - ClassNameTest pattern
+class ReactAgentTest extends TestCase {}
+class CacheServiceTest extends TestCase {}
+class ValidationCoordinatorTest extends TestCase {}
+
+// ❌ Incorrect
+class TestReactAgent extends TestCase {}      // Wrong prefix
+class ReactAgentTests extends TestCase {}     // Plural
+class ReactAgent_Test extends TestCase {}     // Underscore
+```
+
+### Test Method Names
+
+Use descriptive names with `test_` prefix (or `@test` annotation):
+
+```php
+// ✅ Correct - Descriptive test names
+public function test_it_executes_react_loop_successfully(): void {}
+public function test_it_throws_exception_when_max_iterations_exceeded(): void {}
+public function test_it_caches_results_when_caching_enabled(): void {}
+public function test_it_handles_tool_execution_errors_gracefully(): void {}
+
+// ✅ Acceptable - Alternative patterns
+/** @test */
+public function react_loop_executes_successfully(): void {}
+
+// ❌ Incorrect - Not descriptive enough
+public function testRun(): void {}
+public function testSuccess(): void {}
+public function test1(): void {}
+```
+
+### Naming Pattern
+
+Use this pattern: `test_it_[does_what]_[under_what_condition]`
+
+```php
+// Action + Result
+test_it_creates_agent_with_tools()
+test_it_returns_null_when_tool_not_found()
+test_it_throws_exception_when_invalid_input()
+
+// State Check
+test_it_is_complete_after_successful_execution()
+test_it_has_errors_when_validation_fails()
+```
+
+## Test Structure (AAA Pattern)
+
+Arrange-Act-Assert pattern:
+
+```php
+public function test_it_executes_tool_and_returns_result(): void
+{
+    // Arrange - Set up test data and dependencies
+    $client = Mockery::mock(ClaudePhp::class);
+    $tool = Mockery::mock(ToolInterface::class);
+    $tool->shouldReceive('execute')
+        ->once()
+        ->andReturn(new ToolResult('42'));
+    
+    $agent = new ReactAgent($client);
+    $agent->addTool($tool);
+    
+    // Act - Execute the code under test
+    $result = $agent->run('Calculate something');
+    
+    // Assert - Verify the outcome
+    $this->assertTrue($result->isSuccessful());
+    $this->assertEquals('42', $result->getAnswer());
+}
+```
+
+## Mocking External Dependencies
+
+### Mock Claude API Client
+
+**REQUIRED**: Never make real API calls in tests.
+
+```php
+use Mockery;
+use ClaudePhp\ClaudePhp;
+
+public function test_agent_calls_claude_api(): void
+{
+    // ✅ Correct - Mock the client
+    $client = Mockery::mock(ClaudePhp::class);
+    $client->shouldReceive('messages->create')
+        ->once()
+        ->andReturn([
+            'content' => [['text' => 'Response']],
+            'usage' => ['input_tokens' => 10, 'output_tokens' => 20],
+        ]);
+    
+    $agent = new ReactAgent($client);
+    $result = $agent->run('Test input');
+    
+    $this->assertNotNull($result);
+}
+```
+
+### Mock Interfaces
+
+```php
+public function test_agent_uses_tools(): void
+{
+    $client = Mockery::mock(ClaudePhp::class);
+    
+    // Mock tool interface
+    $tool = Mockery::mock(ToolInterface::class);
+    $tool->shouldReceive('getName')->andReturn('calculator');
+    $tool->shouldReceive('execute')
+        ->with(['expression' => '5 + 3'])
+        ->andReturn(new ToolResult('8'));
+    
+    $agent = new ReactAgent($client);
+    $agent->addTool($tool);
+    
+    // Test uses mock
+}
+```
+
+### Mockery Cleanup
+
+```php
+use Mockery;
+use PHPUnit\Framework\TestCase;
+
+class MyTest extends TestCase
+{
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
+}
+```
+
+## Assertions
+
+### Common Assertions
+
+```php
+// Equality
+$this->assertEquals('expected', $actual);
+$this->assertSame($expected, $actual);  // Strict comparison
+
+// Boolean
+$this->assertTrue($condition);
+$this->assertFalse($condition);
+
+// Null
+$this->assertNull($value);
+$this->assertNotNull($value);
+
+// Strings
+$this->assertStringContainsString('substring', $string);
+$this->assertStringStartsWith('prefix', $string);
+
+// Arrays
+$this->assertArrayHasKey('key', $array);
+$this->assertContains('value', $array);
+$this->assertCount(5, $array);
+$this->assertEmpty($array);
+
+// Exceptions
+$this->expectException(AgentException::class);
+$this->expectExceptionMessage('Expected message');
+
+// Objects
+$this->assertInstanceOf(AgentResult::class, $result);
+```
+
+### Custom Assertions
+
+```php
+// ✅ Good - Clear and readable
+$this->assertTrue(
+    $result->isSuccessful(),
+    'Expected agent execution to succeed'
+);
+
+$this->assertEquals(
+    10,
+    $agent->getMaxIterations(),
+    'Max iterations should be 10'
+);
+```
+
+## Test Data
+
+### Use Descriptive Data
+
+```php
+// ✅ Correct - Descriptive test data
+public function test_agent_processes_user_input(): void
+{
+    $userInput = 'Calculate the sum of 25 and 17';
+    $expectedAnswer = '42';
+    
+    $result = $this->agent->run($userInput);
+    
+    $this->assertEquals($expectedAnswer, $result->getAnswer());
+}
+
+// ❌ Incorrect - Unclear test data
+public function test_agent_processes_user_input(): void
+{
+    $input = 'test';
+    $expected = 'foo';
+    
+    $result = $this->agent->run($input);
+    
+    $this->assertEquals($expected, $result->getAnswer());
+}
+```
+
+### Data Providers
+
+Use data providers for parameterized tests:
+
+```php
+/**
+ * @dataProvider validInputProvider
+ */
+public function test_it_validates_different_inputs(
+    string $input,
+    bool $expected
+): void {
+    $result = $this->validator->isValid($input);
+    $this->assertEquals($expected, $result);
+}
+
+public static function validInputProvider(): array
+{
+    return [
+        'empty string' => ['', false],
+        'valid input' => ['valid text', true],
+        'special chars' => ['text with @#$', false],
+        'long input' => [str_repeat('a', 1000), true],
+    ];
+}
+```
+
+## Testing Best Practices
+
+### 1. One Assertion Per Test (Generally)
+
+```php
+// ✅ Preferred - Focused test
+public function test_it_returns_success_status(): void
+{
+    $result = $this->agent->run('input');
+    $this->assertTrue($result->isSuccessful());
+}
+
+public function test_it_returns_correct_answer(): void
+{
+    $result = $this->agent->run('input');
+    $this->assertEquals('expected', $result->getAnswer());
+}
+
+// ⚠️ Acceptable - Related assertions
+public function test_it_returns_complete_result(): void
+{
+    $result = $this->agent->run('input');
+    
+    $this->assertTrue($result->isSuccessful());
+    $this->assertNotEmpty($result->getAnswer());
+    $this->assertIsArray($result->getMetadata());
+}
+```
+
+### 2. Test Edge Cases
+
+```php
+public function test_it_handles_empty_input(): void
+{
+    $result = $this->agent->run('');
+    // Assert behavior
+}
+
+public function test_it_handles_very_long_input(): void
+{
+    $input = str_repeat('a', 100000);
+    $result = $this->agent->run($input);
+    // Assert behavior
+}
+
+public function test_it_handles_null_values(): void
+{
+    $this->expectException(\TypeError::class);
+    $this->agent->run(null);
+}
+```
+
+### 3. Test Error Conditions
+
+```php
+public function test_it_throws_exception_when_tool_fails(): void
+{
+    $tool = Mockery::mock(ToolInterface::class);
+    $tool->shouldReceive('execute')
+        ->andThrow(new ToolExecutionException('Tool failed'));
+    
+    $this->expectException(ToolExecutionException::class);
+    $this->expectExceptionMessage('Tool failed');
+    
+    $this->agent->addTool($tool);
+    $this->agent->run('input');
+}
+```
+
+### 4. Don't Test Framework Code
+
+```php
+// ❌ Incorrect - Testing PHPUnit functionality
+public function test_array_push_works(): void
+{
+    $array = [];
+    array_push($array, 'item');
+    $this->assertCount(1, $array);
+}
+
+// ✅ Correct - Test your code
+public function test_agent_registers_tool(): void
+{
+    $tool = new Calculator();
+    $this->agent->addTool($tool);
+    
+    $this->assertTrue($this->agent->hasTool('calculator'));
+}
+```
+
+### 5. Keep Tests Independent
+
+```php
+// ❌ Incorrect - Tests depend on order
+private static $sharedAgent;
+
+public function test_1_create_agent(): void
+{
+    self::$sharedAgent = new ReactAgent($this->client);
+}
+
+public function test_2_agent_has_name(): void
+{
+    $this->assertNotNull(self::$sharedAgent);
+}
+
+// ✅ Correct - Independent tests
+public function test_agent_is_created_with_name(): void
+{
+    $agent = new ReactAgent($this->client);
+    $this->assertNotNull($agent->getName());
+}
+
+public function test_agent_registers_tools(): void
+{
+    $agent = new ReactAgent($this->client);
+    $agent->addTool(new Calculator());
+    $this->assertTrue($agent->hasTool('calculator'));
+}
+```
+
+## Running Tests
+
+### Command Line
+
+```bash
+# Run all tests
+composer test
+
+# Run specific suite
+composer test:unit
+composer test:integration
+
+# Run with coverage
+composer test:coverage
+
+# Run specific test
+vendor/bin/phpunit tests/Unit/Agents/ReactAgentTest.php
+
+# Run specific method
+vendor/bin/phpunit --filter=test_it_creates_agent_with_tools
+
+# Run with testdox (readable output)
+composer test -- --testdox
+```
+
+### Before Commits
+
+Always run tests before committing:
+
+```bash
+# Full check (format, analyze, test)
+composer check
+
+# Or individually
+composer format:check
+composer analyse
+composer test
+```
+
+## Test Coverage
+
+### Aim for High Coverage
+
+- **Business Logic**: 90%+ coverage
+- **Services**: 80%+ coverage
+- **Utilities**: 70%+ coverage
+
+### Generate Coverage Report
+
+```bash
+# HTML coverage report
+composer test:coverage
+
+# View in browser
+open coverage/index.html
+```
+
+### Coverage Annotations
+
+```php
+/**
+ * @codeCoverageIgnore
+ */
+class DeprecatedClass
+{
+    // Won't be counted in coverage
+}
+```
+
+## Integration Test Guidelines
+
+### Use Test Clients
+
+```php
+class AgentIntegrationTest extends TestCase
+{
+    protected function createTestClient(): ClaudePhp
+    {
+        // Use test API key or mock for integration tests
+        return new ClaudePhp(
+            apiKey: getenv('TEST_API_KEY') ?: 'test-key'
+        );
+    }
+}
+```
+
+### Test Real Workflows
+
+```php
+public function test_complete_agent_workflow(): void
+{
+    $client = $this->createTestClient();
+    $agent = new ReactAgent($client);
+    $agent->addTool(new Calculator());
+    
+    // Test real workflow
+    $result = $agent->run('Calculate 25 + 17');
+    
+    $this->assertTrue($result->isSuccessful());
+    $this->assertStringContainsString('42', $result->getAnswer());
+}
+```
+
+## Common Testing Patterns
+
+### Testing Fluent Interfaces
+
+```php
+public function test_fluent_interface_returns_self(): void
+{
+    $agent = new ReactAgent($this->client);
+    
+    $result = $agent->withTool(new Calculator());
+    
+    $this->assertSame($agent, $result);
+}
+
+public function test_fluent_chain_works(): void
+{
+    $result = $this->agent
+        ->withTool(new Calculator())
+        ->withSystemPrompt('Be helpful')
+        ->maxIterations(5);
+    
+    $this->assertEquals(5, $result->getMaxIterations());
+}
+```
+
+### Testing Callbacks
+
+```php
+public function test_callback_is_invoked(): void
+{
+    $callbackInvoked = false;
+    
+    $this->agent->onUpdate(function () use (&$callbackInvoked) {
+        $callbackInvoked = true;
+    });
+    
+    $this->agent->run('input');
+    
+    $this->assertTrue($callbackInvoked);
+}
+```
+
+### Testing Events
+
+```php
+public function test_event_is_emitted(): void
+{
+    $eventReceived = false;
+    
+    $this->eventManager->subscribe(function ($event) use (&$eventReceived) {
+        if ($event->type === 'flow.started') {
+            $eventReceived = true;
+        }
+    });
+    
+    $this->executor->execute($this->agent, 'task');
+    
+    $this->assertTrue($eventReceived);
+}
+```
+
+## Test Documentation
+
+### Add PHPDoc to Tests
+
+```php
+/**
+ * Test that the agent correctly executes a ReAct loop
+ * with multiple tool calls and returns a successful result.
+ *
+ * @test
+ */
+public function it_executes_react_loop_with_multiple_tools(): void
+{
+    // Test implementation
+}
+```
+
+## Continuous Integration
+
+Tests run automatically on:
+- Push to branches
+- Pull requests
+- Before merges
+
+CI checks:
+- All tests pass
+- Code coverage maintained
+- No PHPStan errors
+
+## References
+
+- [PHPUnit Documentation](https://phpunit.de/documentation.html)
+- [Mockery Documentation](http://docs.mockery.io/)
+- [Test-Driven Development](https://martinfowler.com/bliki/TestDrivenDevelopment.html)
+
+## Quick Checklist
+
+Before committing:
+- [ ] All tests pass (`composer test`)
+- [ ] New features have tests
+- [ ] Bug fixes have regression tests
+- [ ] Mocked external dependencies
+- [ ] Tests are independent
+- [ ] Descriptive test names
+- [ ] Coverage maintained or improved
+- [ ] No skipped/incomplete tests without reason

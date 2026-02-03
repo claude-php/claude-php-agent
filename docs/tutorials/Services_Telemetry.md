@@ -119,7 +119,7 @@ $telemetry->recordHistogram('response.size.bytes', $responseSize);
 
 // Token usage
 $telemetry->recordHistogram('llm.tokens.total', $tokens, [
-    'model' => 'claude-3-opus',
+    'model' => 'claude-opus-4-5',
 ]);
 ```
 

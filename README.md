@@ -13,6 +13,7 @@ A powerful PHP framework for building AI agents with Claude, featuring ReAct loo
 ## Features
 
 - 🔄 **Loop Strategies** - ReactLoop, PlanExecuteLoop, ReflectionLoop, and StreamingLoop
+- 🌊 **Streaming Flow Execution** - Real-time token streaming with event broadcasting (NEW!)
 - 🛠️ **Tool System** - Easy tool definition, registration, and execution
 - 🧠 **Memory Management** - Persistent state across agent iterations
 - 🏗️ **Agent Patterns** - ReAct, Plan-Execute, Reflection, Hierarchical, and more
@@ -64,9 +65,42 @@ $result = $agent->run('What is 25 * 17 + 100?');
 echo $result->getAnswer();
 ```
 
-### Progress Updates (Streaming UI / Live Status)
+### Real-Time Streaming Flow Execution 🌊
 
-While an agent is running, you can receive continuous progress events (iteration output, tool results, and streaming deltas when using `StreamingLoop`) via `onUpdate()`:
+**NEW!** Stream agent execution with token-by-token LLM responses, progress tracking, and event broadcasting:
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\ServiceType;
+
+// Get the streaming executor
+$executor = ServiceManager::getInstance()->get(ServiceType::FLOW_EXECUTOR);
+
+// Stream execution with real-time events
+foreach ($executor->executeWithStreaming($agent, "Calculate 15 * 23") as $event) {
+    match ($event['type']) {
+        'token' => print($event['data']['token']),              // Token-by-token streaming
+        'progress' => printf("%.1f%%\n", $event['data']['progress_percent']), // Progress updates
+        'tool_start' => print("🔧 {$event['data']['tool']}\n"), // Tool execution
+        'end' => print("✅ Done!\n"),
+        default => null
+    };
+}
+```
+
+**Features:**
+- 🎯 Token-by-token LLM responses
+- 📊 Real-time progress tracking
+- 🔧 Tool execution events
+- 📡 SSE support for web apps
+- 🎪 Multiple listener broadcasting
+- ⚡ Generator-based streaming
+
+📚 **[Complete Streaming Documentation](docs/execution/README.md)** | **[Event Reference](docs/execution/EVENTS.md)** | **[Examples](examples/Execution/)**
+
+### Progress Updates (Legacy)
+
+You can also receive progress events via `onUpdate()`:
 
 ```php
 use ClaudeAgents\Progress\AgentUpdate;
@@ -74,7 +108,6 @@ use ClaudeAgents\Progress\AgentUpdate;
 $agent = Agent::create($client)
     ->onUpdate(function (AgentUpdate $update): void {
         // Send to WebSocket/SSE, update CLI spinner, etc.
-        // $update->getType() and $update->getData() are structured and stable.
     });
 ```
 
@@ -412,6 +445,124 @@ $config = new AgentConfig([
 $agent = Agent::create()->withConfig($config);
 ```
 
+## Streaming Flow Execution 🌊
+
+**NEW!** Real-time streaming flow execution with comprehensive event management, inspired by Langflow's architecture.
+
+### Features
+
+- **Token-by-Token Streaming** - Real-time LLM responses as they're generated
+- **Progress Tracking** - Detailed execution progress with time estimates
+- **Event Broadcasting** - Multiple subscribers with one-to-many pattern
+- **SSE Support** - Server-Sent Events for web applications
+- **Queue-Based** - Non-blocking event emission with configurable limits
+- **Langflow Compatible** - Compatible event types and patterns
+
+### Quick Example
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\ServiceType;
+
+// Get streaming executor from ServiceManager
+$executor = ServiceManager::getInstance()->get(ServiceType::FLOW_EXECUTOR);
+
+// Stream execution with events
+foreach ($executor->executeWithStreaming($agent, "Your task") as $event) {
+    match ($event['type']) {
+        'token' => print($event['data']['token']),
+        'progress' => updateProgressBar($event['data']['progress_percent']),
+        'tool_start' => logToolExecution($event['data']['tool']),
+        'error' => handleError($event['data']['error']),
+        'end' => print("\n✅ Complete!\n"),
+        default => null
+    };
+}
+```
+
+### SSE Streaming for Web Apps
+
+```php
+// Set SSE headers
+header('Content-Type: text/event-stream');
+header('Cache-Control: no-cache');
+
+// Stream events to browser
+foreach ($executor->streamSSE($agent, $task) as $sseData) {
+    echo $sseData;
+    flush();
+}
+```
+
+**JavaScript Client:**
+```javascript
+const eventSource = new EventSource('/stream?task=' + encodeURIComponent(task));
+
+eventSource.addEventListener('token', (e) => {
+    const data = JSON.parse(e.data);
+    appendToken(data.data.token);
+});
+
+eventSource.addEventListener('progress', (e) => {
+    const data = JSON.parse(e.data);
+    updateProgressBar(data.data.percent);
+});
+```
+
+### Multiple Listeners
+
+```php
+$eventManager = ServiceManager::getInstance()->get(ServiceType::EVENT_MANAGER);
+
+// Token counter listener
+$eventManager->subscribe(function($event) {
+    if ($event->isToken()) {
+        incrementTokenCount();
+    }
+});
+
+// Progress logger listener
+$eventManager->subscribe(function($event) {
+    if ($event->isProgress()) {
+        logProgress($event->data['percent']);
+    }
+});
+
+// Error monitor listener
+$eventManager->subscribe(function($event) {
+    if ($event->isError()) {
+        alertError($event->data['error']);
+    }
+});
+```
+
+### Available Event Types
+
+**Flow Lifecycle:** `flow.started`, `flow.completed`, `flow.failed`  
+**Token Streaming:** `token.received`, `token.chunk`  
+**Iterations:** `iteration.started`, `iteration.completed`, `iteration.failed`  
+**Tools:** `tool.started`, `tool.completed`, `tool.failed`  
+**Progress:** `progress.update`, `step.started`, `step.completed`  
+**Errors:** `error`, `warning`, `info`
+
+### Documentation
+
+- 📚 **[Complete Guide](docs/execution/README.md)** - Architecture, usage, and best practices
+- 📖 **[Event Reference](docs/execution/EVENTS.md)** - All 25+ event types documented
+- 🎯 **[Streaming Patterns](docs/execution/STREAMING.md)** - Advanced patterns and SSE implementation
+- 💡 **[Examples](examples/Execution/)** - 4 comprehensive working examples
+
+### Architecture
+
+The system adapts Python's async patterns to PHP:
+
+| Python (Langflow) | PHP (claude-php-agent) |
+|-------------------|------------------------|
+| `async/await` | `Generator/yield` |
+| `asyncio.Queue` | `SplQueue` |
+| Async subscribers | Iterator pattern |
+| `async for` | `foreach` with Generator |
+
 ## Async & Concurrent Execution
 
 The framework leverages **AMPHP** for true asynchronous and concurrent execution:
@@ -534,7 +685,13 @@ See the [examples](./examples) directory for 110+ complete working examples incl
 - Production deployment patterns (7 examples)
 - Testing strategies (7 examples)
 
-> 💡 All tutorial examples are fully runnable: `php examples/tutorials/component-validation/01-basic-validation.php`
+**🌊 Streaming Flow Execution (4 examples in `examples/Execution/`):**
+- `basic-streaming.php` - Token streaming with event handling
+- `progress-tracking.php` - Real-time progress monitoring
+- `multiple-listeners.php` - Event broadcasting pattern
+- `sse-server.php` - Complete SSE endpoint with HTML client
+
+> 💡 All examples are fully runnable: `php examples/Execution/basic-streaming.php`
 
 ## Documentation
 
@@ -550,10 +707,11 @@ New to AI agents? Start with our comprehensive tutorial series:
   - [Tutorial 4: Production-Ready Patterns](docs/tutorials/getting-started/04-Production-Patterns.md)
   - [Tutorial 5: Advanced Patterns](docs/tutorials/getting-started/05-Advanced-Patterns.md)
 
-### 🆕 New Features Tutorials (v0.7.0 - v0.8.0)
+### 🆕 New Features Tutorials (v0.7.0 - v0.9.0)
 
 Master the latest framework capabilities:
 
+- **[🌊 Streaming Flow Execution](docs/execution/README.md)** - Real-time streaming with event management (NEW!)
 - **[🔍 Component Validation](docs/tutorials/ComponentValidation_Tutorial.md)** - Runtime validation by instantiation (45min)
 - **[🏢 Services System](docs/tutorials/ServicesSystem_Tutorial.md)** - Enterprise service management (50min)
 - **[🌐 MCP Server Integration](docs/tutorials/MCPServer_Tutorial.md)** - Connect to Claude Desktop (55min)
@@ -561,11 +719,14 @@ Master the latest framework capabilities:
 - **[🚀 Production Patterns](docs/tutorials/ProductionPatterns_Tutorial.md)** - Production deployment (60min)
 - **[✅ Testing Strategies](docs/tutorials/TestingStrategies_Tutorial.md)** - Comprehensive testing (55min)
 
-> 💡 **42 runnable examples** included in `examples/tutorials/` - Each tutorial comes with 7 working code samples!
+> 💡 **46 runnable examples** included - Each feature comes with working code samples!
 
 ### 📖 Complete Documentation
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
+- **[🌊 Streaming Flow Execution](docs/execution/README.md)** - Real-time streaming guide (NEW!)
+  - [Event Reference](docs/execution/EVENTS.md) - All event types
+  - [Streaming Patterns](docs/execution/STREAMING.md) - SSE & patterns
 - **[Documentation Index](docs/README.md)** - Complete guide to all features
 - **[All Tutorials](docs/tutorials/README.md)** - 17+ comprehensive tutorials with examples
 - **[Loop Strategies](docs/loop-strategies.md)** - Understanding agent loops
@@ -574,7 +735,7 @@ Master the latest framework capabilities:
 - **[MCP Server Integration](docs/mcp-server-integration.md)** - Claude Desktop connectivity
 - **[Component Validation](docs/component-validation-service.md)** - Runtime validation guide
 - **[Services System](docs/services/README.md)** - Enterprise service management
-- **[Examples](examples/)** - 70+ working code examples + 42 tutorial examples
+- **[Examples](examples/)** - 70+ working code examples + 46 tutorial examples
 
 ## Requirements
 
