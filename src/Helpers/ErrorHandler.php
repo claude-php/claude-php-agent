@@ -17,6 +17,26 @@ use Psr\Log\NullLogger;
  *
  * Provides comprehensive error handling with retry logic, exponential backoff,
  * and graceful degradation patterns.
+ *
+ * @deprecated Use ClaudeAgents\Services\ErrorHandling\ErrorHandlingService instead
+ * @see \ClaudeAgents\Services\ErrorHandling\ErrorHandlingService
+ *
+ * Migration Example:
+ * ```php
+ * // Old:
+ * $handler = new ErrorHandler($logger, 3, 1000);
+ * $result = $handler->executeWithRetry($fn, 'context');
+ *
+ * // New:
+ * use ClaudeAgents\Services\ServiceManager;
+ * use ClaudeAgents\Services\ServiceType;
+ *
+ * $handler = ServiceManager::getInstance()->get(ServiceType::ERROR_HANDLING);
+ * $result = $handler->executeWithRetry($fn, 'context');
+ * // Plus new features:
+ * $userMessage = $handler->convertToUserFriendly($exception);
+ * $details = $handler->getErrorDetails($exception);
+ * ```
  */
 class ErrorHandler
 {
@@ -24,6 +44,9 @@ class ErrorHandler
     private int $maxRetries;
     private int $initialDelayMs;
 
+    /**
+     * @deprecated Use ErrorHandlingService via ServiceManager instead
+     */
     public function __construct(
         ?LoggerInterface $logger = null,
         int $maxRetries = 3,

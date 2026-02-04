@@ -21,6 +21,7 @@ enum ServiceType: string
     case TRANSACTION = 'transaction';
     case FLOW_EXECUTOR = 'flow_executor';
     case EVENT_MANAGER = 'event_manager';
+    case ERROR_HANDLING = 'error_handling';
 
     /**
      * Get the fully qualified class name for this service type.
@@ -40,6 +41,7 @@ enum ServiceType: string
             self::TRANSACTION => 'ClaudeAgents\\Services\\Transaction\\TransactionService',
             self::FLOW_EXECUTOR => 'ClaudeAgents\\Execution\\StreamingFlowExecutor',
             self::EVENT_MANAGER => 'ClaudeAgents\\Events\\FlowEventManager',
+            self::ERROR_HANDLING => 'ClaudeAgents\\Services\\ErrorHandling\\ErrorHandlingService',
         };
     }
 
@@ -61,6 +63,7 @@ enum ServiceType: string
             self::TRANSACTION => 'ClaudeAgents\\Services\\Transaction\\TransactionServiceFactory',
             self::FLOW_EXECUTOR => 'ClaudeAgents\\Services\\Execution\\StreamingFlowExecutorServiceFactory',
             self::EVENT_MANAGER => 'ClaudeAgents\\Services\\Execution\\FlowEventManagerServiceFactory',
+            self::ERROR_HANDLING => 'ClaudeAgents\\Services\\ErrorHandling\\ErrorHandlingServiceFactory',
         };
     }
 }

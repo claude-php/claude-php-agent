@@ -13,8 +13,9 @@ A powerful PHP framework for building AI agents with Claude, featuring ReAct loo
 ## Features
 
 - 🔄 **Loop Strategies** - ReactLoop, PlanExecuteLoop, ReflectionLoop, and StreamingLoop
-- 🌊 **Streaming Flow Execution** - Real-time token streaming with event broadcasting (NEW!)
-- 🎨 **Template System** - 22+ starter templates with instant instantiation (NEW!)
+- 🌊 **Streaming Flow Execution** - Real-time token streaming with event broadcasting
+- 🎨 **Template System** - 22+ starter templates with instant instantiation
+- **🎯 Error Handling Service** - User-friendly error messages for all API errors (NEW!)
 - 🛠️ **Tool System** - Easy tool definition, registration, and execution
 - 🧠 **Memory Management** - Persistent state across agent iterations
 - 🏗️ **Agent Patterns** - ReAct, Plan-Execute, Reflection, Hierarchical, and more
@@ -98,6 +99,47 @@ foreach ($executor->executeWithStreaming($agent, "Calculate 15 * 23") as $event)
 - ⚡ Generator-based streaming
 
 📚 **[Complete Streaming Documentation](docs/execution/README.md)** | **[Event Reference](docs/execution/EVENTS.md)** | **[Examples](examples/Execution/)**
+
+## Error Handling Service
+
+Convert technical API errors into user-friendly messages. Inspired by Langflow's error handling approach:
+
+```php
+use ClaudeAgents\Services\ServiceManager;
+use ClaudeAgents\Services\ServiceType;
+
+// Get the service
+$errorService = ServiceManager::getInstance()->get(ServiceType::ERROR_HANDLING);
+
+try {
+    $result = $agent->run('Your task');
+} catch (\Throwable $e) {
+    // Convert to user-friendly message
+    echo $errorService->convertToUserFriendly($e);
+    // Output: "Rate limit exceeded. Please wait before retrying."
+    
+    // Get detailed error info for logging
+    $details = $errorService->getErrorDetails($e);
+    $logger->error('Agent failed', $details);
+}
+```
+
+**Error Pattern Coverage:**
+- Rate limits → "Rate limit exceeded. Please wait before retrying."
+- Auth errors → "Authentication failed. Please check your API key."
+- Timeouts → "Request timed out. Please try again."
+- Connection → "Connection error. Check your network."
+- 9 default patterns + custom pattern support
+
+**Features:**
+- 🎯 User-friendly messages for all Claude API errors
+- 🔄 Smart retry logic with exponential backoff
+- 📊 Detailed error context for debugging
+- ⚙️ Configurable patterns (defaults + custom)
+- 🏢 Service layer integration
+- 🛠️ Safe tool execution helpers
+
+📚 **[Error Handling Documentation](docs/services/error-handling.md)** | **[Tutorial](docs/tutorials/ErrorHandling_Tutorial.md)** | **[Examples](examples/Services/)**
 
 ## Template/Starter Project System
 
@@ -770,9 +812,11 @@ Master the latest framework capabilities:
 ### 📖 Complete Documentation
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
-- **[🌊 Streaming Flow Execution](docs/execution/README.md)** - Real-time streaming guide (NEW!)
+- **[🌊 Streaming Flow Execution](docs/execution/README.md)** - Real-time streaming guide
   - [Event Reference](docs/execution/EVENTS.md) - All event types
   - [Streaming Patterns](docs/execution/STREAMING.md) - SSE & patterns
+- **[🎯 Error Handling Service](docs/services/error-handling.md)** - User-friendly error messages (NEW!)
+  - [Tutorial](docs/tutorials/ErrorHandling_Tutorial.md) - Complete 6-part tutorial
 - **[Documentation Index](docs/README.md)** - Complete guide to all features
 - **[All Tutorials](docs/tutorials/README.md)** - 17+ comprehensive tutorials with examples
 - **[Loop Strategies](docs/loop-strategies.md)** - Understanding agent loops
@@ -781,7 +825,7 @@ Master the latest framework capabilities:
 - **[MCP Server Integration](docs/mcp-server-integration.md)** - Claude Desktop connectivity
 - **[Component Validation](docs/component-validation-service.md)** - Runtime validation guide
 - **[Services System](docs/services/README.md)** - Enterprise service management
-- **[Examples](examples/)** - 70+ working code examples + 46 tutorial examples
+- **[Examples](examples/)** - 79+ working code examples + 55 tutorial examples
 
 ## Requirements
 
@@ -817,7 +861,17 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## What's New
 
-### v0.8.0 (Latest)
+### v1.3.0 (Latest)
+- ✨ **Error Handling Service** - User-friendly error messages for all API errors (HIGH PRIORITY)
+  - 9 default error patterns for common API errors
+  - Custom pattern support with override capability
+  - Full service layer integration
+  - Comprehensive retry logic and tool helpers
+- 📚 New tutorial: Complete 6-part Error Handling tutorial
+- 📝 9 new examples with real API testing
+- 🔧 Deprecated old ErrorHandler with migration guide
+
+### v0.8.0
 - ✨ **Component Validation Service** - Runtime validation by instantiation
 - ✨ **Code Generation Agent** - AI-powered code generation with validation
 - 📚 New tutorials: Component Validation, Code Generation, Production Patterns, Testing Strategies
