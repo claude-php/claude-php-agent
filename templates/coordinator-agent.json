@@ -1,0 +1,35 @@
+{
+  "id": "coordinator-001",
+  "name": "Coordinator Agent",
+  "description": "Multi-agent orchestration and load balancing for distributed systems and agent networks.",
+  "category": "specialized",
+  "tags": ["coordinator", "orchestration", "load-balancing", "distributed"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🎭",
+    "difficulty": "advanced",
+    "estimated_setup": "25 minutes",
+    "use_cases": [
+      "Agent networks",
+      "Load balancing",
+      "Distributed systems",
+      "Multi-agent coordination"
+    ]
+  },
+  "config": {
+    "agent_type": "CoordinatorAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 20,
+    "enable_ml_selection": true,
+    "system_prompt": "You are a coordinator agent that manages and balances workload across multiple agents.",
+    "temperature": 0.5,
+    "max_tokens": 4096
+  }
+}

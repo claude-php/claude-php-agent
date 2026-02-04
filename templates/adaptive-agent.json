@@ -1,0 +1,36 @@
+{
+  "id": "adaptive-001",
+  "name": "Adaptive Agent Service",
+  "description": "Intelligent meta-agent that automatically selects the best agent type for each task with quality validation.",
+  "category": "agents",
+  "tags": ["adaptive", "meta-agent", "intelligent-selection", "advanced"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🎯",
+    "difficulty": "advanced",
+    "estimated_setup": "25 minutes",
+    "use_cases": [
+      "Auto-optimization",
+      "Quality assurance",
+      "Agent selection",
+      "Adaptive workflows"
+    ]
+  },
+  "config": {
+    "agent_type": "AdaptiveAgentService",
+    "model": "claude-sonnet-4-5",
+    "max_attempts": 3,
+    "quality_threshold": 7.0,
+    "enable_reframing": true,
+    "system_prompt": "You are an adaptive agent service that analyzes tasks and selects the optimal agent for execution.",
+    "temperature": 0.6,
+    "max_tokens": 4096
+  }
+}

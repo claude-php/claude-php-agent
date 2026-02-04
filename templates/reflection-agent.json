@@ -1,0 +1,36 @@
+{
+  "id": "reflection-001",
+  "name": "Reflection Agent",
+  "description": "Self-improvement loop agent that generates output, reflects on quality, and refines until meeting quality threshold.",
+  "category": "agents",
+  "tags": ["reflection", "quality", "refinement", "advanced"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🪞",
+    "difficulty": "advanced",
+    "estimated_setup": "15 minutes",
+    "use_cases": [
+      "Code generation",
+      "Content writing",
+      "Quality-critical outputs",
+      "Iterative improvement"
+    ]
+  },
+  "config": {
+    "agent_type": "ReflectionAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 5,
+    "max_refinements": 3,
+    "quality_threshold": 8,
+    "system_prompt": "You are a reflection agent that generates high-quality output by iteratively reflecting on and improving your work.",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }
+}

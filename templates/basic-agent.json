@@ -1,0 +1,33 @@
+{
+  "id": "basic-001",
+  "name": "Basic Agent",
+  "description": "A simple agent with one tool for basic tasks. Perfect for getting started with the framework.",
+  "category": "agents",
+  "tags": ["beginner", "simple", "starter"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🤖",
+    "difficulty": "beginner",
+    "estimated_setup": "5 minutes",
+    "use_cases": [
+      "Learning the framework",
+      "Simple automation tasks",
+      "Single-tool operations"
+    ]
+  },
+  "config": {
+    "agent_type": "Agent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 5,
+    "system_prompt": "You are a helpful assistant. Use the available tool to complete the user's request.",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }
+}

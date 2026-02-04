@@ -1,0 +1,35 @@
+{
+  "id": "plan-001",
+  "name": "Plan-Execute Agent",
+  "description": "Multi-step planning agent that creates a plan first, then executes systematically for complex tasks.",
+  "category": "agents",
+  "tags": ["planning", "multi-step", "systematic", "advanced"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "📋",
+    "difficulty": "advanced",
+    "estimated_setup": "15 minutes",
+    "use_cases": [
+      "Project planning",
+      "Complex workflows",
+      "Multi-step tasks",
+      "Strategic execution"
+    ]
+  },
+  "config": {
+    "agent_type": "PlanExecuteAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 15,
+    "allow_replan": true,
+    "system_prompt": "You are a planning agent that breaks down complex tasks into detailed plans and executes them systematically.",
+    "temperature": 0.6,
+    "max_tokens": 4096
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "hierarchical-001",
+  "name": "Hierarchical Agent",
+  "description": "Master-worker pattern agent that delegates specialized subtasks to worker agents for complex multi-domain tasks.",
+  "category": "specialized",
+  "tags": ["hierarchical", "master-worker", "delegation", "multi-domain"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "👑",
+    "difficulty": "advanced",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "Complex reports",
+      "Multi-domain tasks",
+      "Team coordination",
+      "Specialized workflows"
+    ]
+  },
+  "config": {
+    "agent_type": "HierarchicalAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 15,
+    "system_prompt": "You are a master agent that coordinates worker agents to complete complex tasks requiring multiple specializations.",
+    "temperature": 0.6,
+    "max_tokens": 4096
+  }
+}

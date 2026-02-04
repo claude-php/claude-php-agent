@@ -1,0 +1,35 @@
+{
+  "id": "knowledge-001",
+  "name": "Knowledge Manager Agent",
+  "description": "Knowledge management and retrieval agent for organizing, storing, and accessing shared information.",
+  "category": "rag",
+  "tags": ["knowledge", "management", "storage", "retrieval"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🗄️",
+    "difficulty": "advanced",
+    "estimated_setup": "25 minutes",
+    "use_cases": [
+      "Knowledge bases",
+      "Document management",
+      "Information retrieval",
+      "Shared memory systems"
+    ]
+  },
+  "config": {
+    "agent_type": "MemoryManagerAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "storage_type": "vector",
+    "system_prompt": "You are a knowledge manager that organizes, stores, and retrieves information efficiently.",
+    "temperature": 0.5,
+    "max_tokens": 4096
+  }
+}

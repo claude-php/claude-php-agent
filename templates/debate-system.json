@@ -1,0 +1,36 @@
+{
+  "id": "debate-001",
+  "name": "Debate System",
+  "description": "Multi-agent debate and consensus building system for solution refinement and decision making.",
+  "category": "workflows",
+  "tags": ["debate", "consensus", "multi-agent", "decision-making"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🗣️",
+    "difficulty": "advanced",
+    "estimated_setup": "25 minutes",
+    "use_cases": [
+      "Decision making",
+      "Solution refinement",
+      "Consensus building",
+      "Multi-perspective analysis"
+    ]
+  },
+  "config": {
+    "agent_type": "Agent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "num_rounds": 3,
+    "enable_ml_optimization": true,
+    "system_prompt": "You are part of a debate system that explores different perspectives to reach optimal decisions through discussion.",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }
+}

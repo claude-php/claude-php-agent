@@ -1,0 +1,36 @@
+{
+  "id": "memory-001",
+  "name": "Memory Chatbot",
+  "description": "Conversational agent with persistent memory for maintaining context across sessions and conversations.",
+  "category": "chatbots",
+  "tags": ["memory", "chatbot", "persistent", "context"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🧠",
+    "difficulty": "intermediate",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "Personal assistants",
+      "Long-term conversations",
+      "User preference tracking",
+      "Session continuity"
+    ]
+  },
+  "config": {
+    "agent_type": "DialogAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "memory_type": "conversation",
+    "max_memory_turns": 10,
+    "system_prompt": "You are a chatbot with memory. Remember user preferences and context across conversations to provide personalized assistance.",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }
+}

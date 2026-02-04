@@ -1,0 +1,36 @@
+{
+  "id": "async-001",
+  "name": "Async Batch Processor",
+  "description": "Concurrent task processing agent using AMPHP for high-throughput parallel execution.",
+  "category": "production",
+  "tags": ["async", "batch", "concurrent", "parallel", "performance"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent", "amphp/amp"]
+  },
+  "metadata": {
+    "icon": "⚡",
+    "difficulty": "advanced",
+    "estimated_setup": "25 minutes",
+    "use_cases": [
+      "Batch processing",
+      "Concurrent execution",
+      "High-throughput tasks",
+      "Parallel workflows"
+    ]
+  },
+  "config": {
+    "agent_type": "ReactAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "concurrency": 5,
+    "batch_size": 10,
+    "system_prompt": "You are a batch processing agent optimized for concurrent execution of multiple tasks.",
+    "temperature": 0.6,
+    "max_tokens": 4096
+  }
+}

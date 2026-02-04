@@ -1,0 +1,37 @@
+{
+  "id": "tot-001",
+  "name": "Tree-of-Thoughts Agent",
+  "description": "Exploration agent that evaluates multiple reasoning paths simultaneously for creative problem solving and optimization.",
+  "category": "agents",
+  "tags": ["exploration", "creative", "optimization", "advanced"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🌳",
+    "difficulty": "advanced",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "Creative writing",
+      "Optimization problems",
+      "Strategy evaluation",
+      "Multi-path exploration"
+    ]
+  },
+  "config": {
+    "agent_type": "TreeOfThoughtsAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "search_strategy": "best_first",
+    "branch_count": 3,
+    "max_depth": 5,
+    "system_prompt": "You are a tree-of-thoughts agent that explores multiple reasoning paths to find optimal solutions.",
+    "temperature": 0.8,
+    "max_tokens": 4096
+  }
+}

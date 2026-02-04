@@ -1,0 +1,37 @@
+{
+  "id": "maker-001",
+  "name": "MAKER Agent",
+  "description": "Million-step reliable task agent using massively decomposed agentic processes with near-zero error rates.",
+  "category": "agents",
+  "tags": ["maker", "reliable", "decomposition", "advanced", "zero-error"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "⚙️",
+    "difficulty": "advanced",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "Long sequences",
+      "Organization-level tasks",
+      "High-reliability requirements",
+      "Million-step processes"
+    ]
+  },
+  "config": {
+    "agent_type": "MakerAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 100,
+    "voting_k": 3,
+    "enable_red_flagging": true,
+    "max_decomposition_depth": 10,
+    "system_prompt": "You are a MAKER agent that solves complex tasks through extreme decomposition and multi-agent voting for near-zero error rates.",
+    "temperature": 0.5,
+    "max_tokens": 4096
+  }
+}

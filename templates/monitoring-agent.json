@@ -1,0 +1,35 @@
+{
+  "id": "monitoring-001",
+  "name": "Monitoring Agent",
+  "description": "System monitoring and anomaly detection agent for real-time performance tracking and alerting.",
+  "category": "specialized",
+  "tags": ["monitoring", "alerts", "anomaly-detection", "real-time"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "📊",
+    "difficulty": "intermediate",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "System monitoring",
+      "Performance tracking",
+      "Anomaly detection",
+      "Incident management"
+    ]
+  },
+  "config": {
+    "agent_type": "MonitoringAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 5,
+    "threshold_multiplier": 2.0,
+    "system_prompt": "You are a monitoring agent that tracks system metrics, detects anomalies, and alerts on issues.",
+    "temperature": 0.3,
+    "max_tokens": 2048
+  }
+}

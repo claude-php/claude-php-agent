@@ -1,0 +1,36 @@
+{
+  "id": "rag-001",
+  "name": "RAG Agent",
+  "description": "Retrieval-Augmented Generation agent for document retrieval and question answering with knowledge bases.",
+  "category": "rag",
+  "tags": ["rag", "retrieval", "qa", "knowledge-base"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "📚",
+    "difficulty": "intermediate",
+    "estimated_setup": "20 minutes",
+    "use_cases": [
+      "Document Q&A",
+      "Knowledge retrieval",
+      "Information extraction",
+      "Context-aware responses"
+    ]
+  },
+  "config": {
+    "agent_type": "Agent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "top_k": 5,
+    "enable_ml_optimization": true,
+    "system_prompt": "You are a RAG agent that retrieves relevant information from documents to provide accurate, context-aware answers.",
+    "temperature": 0.5,
+    "max_tokens": 4096
+  }
+}

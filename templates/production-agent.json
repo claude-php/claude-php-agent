@@ -1,0 +1,37 @@
+{
+  "id": "production-001",
+  "name": "Production Agent",
+  "description": "Production-ready agent with comprehensive error handling, logging, monitoring, and retry logic.",
+  "category": "production",
+  "tags": ["production", "error-handling", "logging", "monitoring", "reliability"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "🏭",
+    "difficulty": "advanced",
+    "estimated_setup": "30 minutes",
+    "use_cases": [
+      "Production deployments",
+      "Enterprise applications",
+      "Mission-critical tasks",
+      "High-reliability systems"
+    ]
+  },
+  "config": {
+    "agent_type": "ReactAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "retry_max_attempts": 3,
+    "retry_delay_ms": 1000,
+    "timeout": 30.0,
+    "system_prompt": "You are a production-ready agent with robust error handling and monitoring capabilities.",
+    "temperature": 0.6,
+    "max_tokens": 4096
+  }
+}

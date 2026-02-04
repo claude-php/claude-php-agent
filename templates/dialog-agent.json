@@ -1,0 +1,35 @@
+{
+  "id": "dialog-001",
+  "name": "Dialog Agent",
+  "description": "Conversational AI agent with context tracking and memory for natural multi-turn conversations.",
+  "category": "chatbots",
+  "tags": ["conversation", "chatbot", "context", "memory"],
+  "version": "1.0.0",
+  "author": "Claude PHP Agent Team",
+  "last_tested_version": "1.2.0",
+  "requirements": {
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring"],
+    "packages": ["claude-php/agent"]
+  },
+  "metadata": {
+    "icon": "💬",
+    "difficulty": "intermediate",
+    "estimated_setup": "15 minutes",
+    "use_cases": [
+      "Customer service",
+      "Virtual assistants",
+      "Chat interfaces",
+      "Interactive support"
+    ]
+  },
+  "config": {
+    "agent_type": "DialogAgent",
+    "model": "claude-sonnet-4-5",
+    "max_iterations": 10,
+    "context_window": 5,
+    "system_prompt": "You are a friendly conversational assistant. Maintain context across turns and provide helpful, natural responses.",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }
+}

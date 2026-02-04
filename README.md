@@ -14,6 +14,7 @@ A powerful PHP framework for building AI agents with Claude, featuring ReAct loo
 
 - 🔄 **Loop Strategies** - ReactLoop, PlanExecuteLoop, ReflectionLoop, and StreamingLoop
 - 🌊 **Streaming Flow Execution** - Real-time token streaming with event broadcasting (NEW!)
+- 🎨 **Template System** - 22+ starter templates with instant instantiation (NEW!)
 - 🛠️ **Tool System** - Easy tool definition, registration, and execution
 - 🧠 **Memory Management** - Persistent state across agent iterations
 - 🏗️ **Agent Patterns** - ReAct, Plan-Execute, Reflection, Hierarchical, and more
@@ -97,6 +98,51 @@ foreach ($executor->executeWithStreaming($agent, "Calculate 15 * 23") as $event)
 - ⚡ Generator-based streaming
 
 📚 **[Complete Streaming Documentation](docs/execution/README.md)** | **[Event Reference](docs/execution/EVENTS.md)** | **[Examples](examples/Execution/)**
+
+## Template/Starter Project System
+
+The framework includes a comprehensive template system with 22+ ready-to-use agent configurations:
+
+### Quick Start
+
+```php
+use ClaudeAgents\Templates\TemplateManager;
+
+// Search templates
+$templates = TemplateManager::search(
+    query: 'chatbot',
+    tags: ['conversation'],
+    fields: ['name', 'description']
+);
+
+// Instantiate from template
+$agent = TemplateManager::instantiate('rag-agent', [
+    'api_key' => getenv('ANTHROPIC_API_KEY'),
+    'model' => 'claude-sonnet-4-5'
+]);
+
+// Run the agent
+$result = $agent->run('What is RAG?');
+```
+
+### Available Templates (22+)
+
+**Basic Agents (5):** Basic Agent, ReAct, Chain-of-Thought, Reflex, Model-Based  
+**Advanced Agents (5):** Reflection, Plan-Execute, Tree-of-Thoughts, MAKER, Adaptive  
+**Specialized (5):** Hierarchical, Coordinator, Dialog, Intent Classifier, Monitoring  
+**RAG & Knowledge (3):** RAG Agent, Memory Chatbot, Knowledge Manager  
+**Workflows (2):** Sequential Tasks, Debate System  
+**Production (2):** Production Agent, Async Batch Processor
+
+### Features
+
+- 🔍 **Advanced Search** - Find templates by name, tags, category, or difficulty
+- 📦 **Instant Instantiation** - Create agents with one line of code
+- 💾 **Custom Templates** - Export your agents as reusable templates
+- 🏷️ **Smart Organization** - 6 categories, 30+ tags, 3 difficulty levels
+- 📚 **Rich Metadata** - Use cases, requirements, setup time, and more
+
+📚 **[Complete Template Catalog](docs/templates/TEMPLATE_CATALOG.md)** | **[Template Guide](docs/templates/README.md)** | **[Creating Templates](docs/templates/CREATING_TEMPLATES.md)**
 
 ### Progress Updates (Legacy)
 
