@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-05
+
+### Added - Agent Skills System 🧩
+
+**Agent Skills open standard (agentskills.io)** implementation for PHP that enables reusable, discoverable skill packages with progressive disclosure.
+
+**Core Capabilities:**
+- **SkillManager** as the central facade for discovery, resolution, and prompt composition
+- **SkillLoader/Registry/Resolver/Validator** for filesystem discovery, indexing, scoring, and spec validation
+- **SkillInstaller/Exporter** for managing skill packages on disk
+- **Progressive disclosure** with lightweight summaries and on-demand instruction loading
+- **Skill directory standard** with `SKILL.md` YAML frontmatter + markdown instructions
+
+**Documentation:**
+- Added comprehensive guides and API references under `docs/skills/`
+
 ## [1.3.0] - 2026-02-05
 
 ### Added - Error Handling Service 🎯
@@ -1124,4 +1140,3 @@ This implementation was inspired by Langflow's AI-powered assistant, featuring:
 [0.2.0]: https://github.com/claude-php/agent/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/claude-php/agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/claude-php/agent/releases/tag/v0.1.0
-
