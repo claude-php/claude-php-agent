@@ -121,14 +121,13 @@ class ReactLoop implements CallbackSupportingLoopInterface
 
                 if ($stopReason === 'tool_use') {
                     // Execute tools and add results
+                    // ALWAYS add tool_results message - API requires it after tool_use
                     $toolResults = $this->executeTools($context, $response->content);
 
-                    if (! empty($toolResults)) {
-                        $context->addMessage([
-                            'role' => 'user',
-                            'content' => $toolResults,
-                        ]);
-                    }
+                    $context->addMessage([
+                        'role' => 'user',
+                        'content' => $toolResults,
+                    ]);
                 } else {
                     $this->logger->warning("Unexpected stop reason: {$stopReason}");
                 }

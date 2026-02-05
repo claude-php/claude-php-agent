@@ -209,34 +209,33 @@ class ReflectionLoop implements CallbackSupportingLoopInterface
         $stopReason = $response->stop_reason ?? 'end_turn';
 
         if ($stopReason === 'tool_use') {
+            // ALWAYS add tool_results - API requires it after tool_use
             $toolResults = $this->executeTools($context, $response->content);
 
-            if (! empty($toolResults)) {
-                $context->incrementIteration();
+            $context->incrementIteration();
 
-                $followUpParams = array_merge(
-                    $config->toApiParams(),
-                    [
-                        'messages' => [
-                            ['role' => 'user', 'content' => $task],
-                            ['role' => 'assistant', 'content' => $this->normalizeContentBlocks($response->content)],
-                            ['role' => 'user', 'content' => $toolResults],
-                        ],
-                        'tools' => $context->getToolDefinitions(),
-                    ]
+            $followUpParams = array_merge(
+                $config->toApiParams(),
+                [
+                    'messages' => [
+                        ['role' => 'user', 'content' => $task],
+                        ['role' => 'assistant', 'content' => $this->normalizeContentBlocks($response->content)],
+                        ['role' => 'user', 'content' => $toolResults],
+                    ],
+                    'tools' => $context->getToolDefinitions(),
+                ]
+            );
+
+            $followUpResponse = $client->messages()->create($followUpParams);
+
+            if (isset($followUpResponse->usage)) {
+                $context->addTokenUsage(
+                    $followUpResponse->usage->input_tokens ?? 0,
+                    $followUpResponse->usage->output_tokens ?? 0
                 );
-
-                $followUpResponse = $client->messages()->create($followUpParams);
-
-                if (isset($followUpResponse->usage)) {
-                    $context->addTokenUsage(
-                        $followUpResponse->usage->input_tokens ?? 0,
-                        $followUpResponse->usage->output_tokens ?? 0
-                    );
-                }
-
-                return $this->extractTextContent($followUpResponse->content);
             }
+
+            return $this->extractTextContent($followUpResponse->content);
         }
 
         return $this->extractTextContent($response->content);
@@ -330,34 +329,33 @@ class ReflectionLoop implements CallbackSupportingLoopInterface
         $stopReason = $response->stop_reason ?? 'end_turn';
 
         if ($stopReason === 'tool_use') {
+            // ALWAYS add tool_results - API requires it after tool_use
             $toolResults = $this->executeTools($context, $response->content);
 
-            if (! empty($toolResults)) {
-                $context->incrementIteration();
+            $context->incrementIteration();
 
-                $followUpParams = array_merge(
-                    $config->toApiParams(),
-                    [
-                        'messages' => [
-                            ['role' => 'user', 'content' => $prompt],
-                            ['role' => 'assistant', 'content' => $this->normalizeContentBlocks($response->content)],
-                            ['role' => 'user', 'content' => $toolResults],
-                        ],
-                        'tools' => $context->getToolDefinitions(),
-                    ]
+            $followUpParams = array_merge(
+                $config->toApiParams(),
+                [
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt],
+                        ['role' => 'assistant', 'content' => $this->normalizeContentBlocks($response->content)],
+                        ['role' => 'user', 'content' => $toolResults],
+                    ],
+                    'tools' => $context->getToolDefinitions(),
+                ]
+            );
+
+            $followUpResponse = $client->messages()->create($followUpParams);
+
+            if (isset($followUpResponse->usage)) {
+                $context->addTokenUsage(
+                    $followUpResponse->usage->input_tokens ?? 0,
+                    $followUpResponse->usage->output_tokens ?? 0
                 );
-
-                $followUpResponse = $client->messages()->create($followUpParams);
-
-                if (isset($followUpResponse->usage)) {
-                    $context->addTokenUsage(
-                        $followUpResponse->usage->input_tokens ?? 0,
-                        $followUpResponse->usage->output_tokens ?? 0
-                    );
-                }
-
-                return $this->extractTextContent($followUpResponse->content);
             }
+
+            return $this->extractTextContent($followUpResponse->content);
         }
 
         return $this->extractTextContent($response->content);
