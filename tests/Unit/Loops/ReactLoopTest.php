@@ -510,6 +510,64 @@ class ReactLoopTest extends TestCase
         $this->assertEquals('{"a":5}', $encoded);
     }
 
+    public function testToolExceptionProducesErrorToolResult(): void
+    {
+        $tool = Tool::create('failing_tool')
+            ->handler(function (array $input): string {
+                throw new \RuntimeException('Something went wrong');
+            });
+
+        $config = new AgentConfig();
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Use failing tool',
+            tools: [$tool],
+            config: $config
+        );
+
+        $toolUseResponse = $this->createMockMessage(
+            [
+                [
+                    'type' => 'tool_use',
+                    'id' => 'tool_err',
+                    'name' => 'failing_tool',
+                    'input' => [],
+                ],
+            ],
+            'tool_use'
+        );
+
+        $finalResponse = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'The tool failed, sorry.']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->twice()
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->twice()
+            ->andReturn($toolUseResponse, $finalResponse);
+
+        $result = $this->loop->execute($context);
+
+        $this->assertTrue($result->isCompleted());
+
+        // Verify the tool_result was still added despite the exception
+        $messages = $result->getMessages();
+        // Messages: [0] user task, [1] assistant tool_use, [2] user tool_result, [3] assistant final
+        $this->assertCount(4, $messages);
+
+        $toolResultMessage = $messages[2];
+        $this->assertEquals('user', $toolResultMessage['role']);
+        $this->assertCount(1, $toolResultMessage['content']);
+        $this->assertEquals('tool_result', $toolResultMessage['content'][0]['type']);
+        $this->assertEquals('tool_err', $toolResultMessage['content'][0]['tool_use_id']);
+        $this->assertTrue($toolResultMessage['content'][0]['is_error']);
+        $this->assertStringContainsString('Something went wrong', $toolResultMessage['content'][0]['content']);
+    }
+
     public function testMessagesAccumulate(): void
     {
         $config = new AgentConfig();

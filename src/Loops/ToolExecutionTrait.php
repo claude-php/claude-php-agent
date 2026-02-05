@@ -82,12 +82,22 @@ trait ToolExecutionTrait
 
             $this->logger->debug("Executing tool: {$toolName}", ['input' => $toolInput]);
 
-            $tool = $context->getTool($toolName);
+            // Wrap in try-catch to ensure every tool_use gets a tool_result
+            // The API requires each tool_use to have a corresponding tool_result
+            try {
+                $tool = $context->getTool($toolName);
 
-            if ($tool === null) {
-                $result = ToolResult::error("Unknown tool: {$toolName}");
-            } else {
-                $result = $tool->execute($toolInput);
+                if ($tool === null) {
+                    $result = ToolResult::error("Unknown tool: {$toolName}");
+                } else {
+                    $result = $tool->execute($toolInput);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->error("Tool execution failed: {$toolName}", [
+                    'error' => $e->getMessage(),
+                    'input' => $toolInput,
+                ]);
+                $result = ToolResult::error("Tool execution failed: {$e->getMessage()}");
             }
 
             // Record the tool call
