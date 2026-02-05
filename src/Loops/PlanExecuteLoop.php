@@ -6,7 +6,6 @@ namespace ClaudeAgents\Loops;
 
 use ClaudeAgents\AgentContext;
 use ClaudeAgents\Contracts\CallbackSupportingLoopInterface;
-use ClaudeAgents\Tools\ToolResult;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -21,6 +20,8 @@ use Psr\Log\NullLogger;
  */
 class PlanExecuteLoop implements CallbackSupportingLoopInterface
 {
+    use ToolExecutionTrait;
+
     private LoggerInterface $logger;
     private bool $allowReplan;
 
@@ -320,7 +321,7 @@ class PlanExecuteLoop implements CallbackSupportingLoopInterface
             // Get final response after tool execution
             if (! empty($toolResults)) {
                 $followUpMessages = array_merge($messages, [
-                    ['role' => 'assistant', 'content' => $response->content],
+                    ['role' => 'assistant', 'content' => $this->normalizeContentBlocks($response->content)],
                     ['role' => 'user', 'content' => $toolResults],
                 ]);
 
@@ -348,59 +349,6 @@ class PlanExecuteLoop implements CallbackSupportingLoopInterface
         }
 
         return $this->extractTextContent($response->content);
-    }
-
-    /**
-     * Execute tools from response content.
-     *
-     * @param array<mixed> $content Response content blocks
-     * @return array<array<string, mixed>> Tool results for API
-     */
-    private function executeTools(AgentContext $context, array $content): array
-    {
-        $results = [];
-
-        foreach ($content as $block) {
-            if (! is_array($block)) {
-                continue;
-            }
-
-            $type = $block['type'] ?? null;
-            if ($type !== 'tool_use') {
-                continue;
-            }
-
-            $toolName = $block['name'] ?? '';
-            $toolInput = $block['input'] ?? [];
-            $toolId = $block['id'] ?? '';
-
-            $this->logger->debug("Executing tool: {$toolName}", ['input' => $toolInput]);
-
-            $tool = $context->getTool($toolName);
-
-            if ($tool === null) {
-                $result = ToolResult::error("Unknown tool: {$toolName}");
-            } else {
-                $result = $tool->execute($toolInput);
-            }
-
-            // Record the tool call
-            $context->recordToolCall(
-                $toolName,
-                $toolInput,
-                $result->getContent(),
-                $result->isError()
-            );
-
-            // Fire tool execution callback
-            if ($this->onToolExecution !== null) {
-                ($this->onToolExecution)($toolName, $toolInput, $result);
-            }
-
-            $results[] = $result->toApiFormat($toolId);
-        }
-
-        return $results;
     }
 
     /**
@@ -524,28 +472,5 @@ class PlanExecuteLoop implements CallbackSupportingLoopInterface
         }
 
         return $this->extractTextContent($response->content);
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (! is_array($block)) {
-                continue;
-            }
-
-            $type = $block['type'] ?? null;
-            if ($type === 'text' && isset($block['text'])) {
-                $texts[] = $block['text'];
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

@@ -9,6 +9,7 @@ use ClaudeAgents\Contracts\CallbackSupportingLoopInterface;
 use ClaudeAgents\Contracts\StreamHandlerInterface;
 use ClaudeAgents\Events\FlowEvent;
 use ClaudeAgents\Events\FlowEventManager;
+use ClaudeAgents\Loops\ToolExecutionTrait;
 use ClaudeAgents\Tools\ToolResult;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -21,6 +22,8 @@ use Psr\Log\NullLogger;
  */
 class StreamingLoop implements CallbackSupportingLoopInterface
 {
+    use ToolExecutionTrait;
+
     private LoggerInterface $logger;
 
     /**
@@ -178,10 +181,11 @@ class StreamingLoop implements CallbackSupportingLoopInterface
                     ]);
                 }
 
-                // Add assistant response to messages
+                // Add assistant response to messages with normalized content
+                // to ensure tool_use.input encodes as {} not []
                 $context->addMessage([
                     'role' => 'assistant',
-                    'content' => $response->content,
+                    'content' => $this->normalizeContentBlocks($response->content),
                 ]);
 
                 // Check stop reason
@@ -198,7 +202,7 @@ class StreamingLoop implements CallbackSupportingLoopInterface
 
                 if ($stopReason === 'tool_use') {
                     // Execute tools and add results
-                    $toolResults = $this->executeTools($context, $response->content);
+                    $toolResults = $this->executeStreamingTools($context, $response->content);
 
                     if (! empty($toolResults)) {
                         $context->addMessage([
@@ -291,13 +295,13 @@ class StreamingLoop implements CallbackSupportingLoopInterface
     }
 
     /**
-     * Execute tools from response content.
+     * Execute tools from response content with FlowEvent tracking.
      *
      * @param AgentContext $context
      * @param array<mixed> $content Response content blocks
      * @return array<array<string, mixed>> Tool results for API
      */
-    private function executeTools(AgentContext $context, array $content): array
+    private function executeStreamingTools(AgentContext $context, array $content): array
     {
         $results = [];
 
@@ -314,6 +318,12 @@ class StreamingLoop implements CallbackSupportingLoopInterface
             $toolName = $block['name'] ?? '';
             $toolInput = $block['input'] ?? [];
             $toolId = $block['id'] ?? '';
+
+            // Ensure toolInput is an array for tool execution
+            // (may be stdClass after normalizeContentBlocks)
+            if ($toolInput instanceof \stdClass) {
+                $toolInput = (array) $toolInput;
+            }
 
             $this->logger->debug("Executing tool: {$toolName}", ['input' => $toolInput]);
 
@@ -359,28 +369,5 @@ class StreamingLoop implements CallbackSupportingLoopInterface
         }
 
         return $results;
-    }
-
-    /**
-     * Extract text content from response blocks.
-     *
-     * @param array<mixed> $content
-     */
-    private function extractTextContent(array $content): string
-    {
-        $texts = [];
-
-        foreach ($content as $block) {
-            if (! is_array($block)) {
-                continue;
-            }
-
-            $type = $block['type'] ?? null;
-            if ($type === 'text' && isset($block['text'])) {
-                $texts[] = $block['text'];
-            }
-        }
-
-        return implode("\n", $texts);
     }
 }

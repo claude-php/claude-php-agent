@@ -5,6 +5,7 @@ composer.lock
 # IDE
 .idea/
 .vscode/
+.claude/
 *.sublime-project
 *.sublime-workspace
 .implementation/
@@ -39,3 +40,8 @@ Thumbs.db
 # State files
 *.json.state
 agent_state.json
+
+# Runtime storage
+/storage/sessions/
+/storage/user-*/
+/storage/variables/

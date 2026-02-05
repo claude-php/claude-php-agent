@@ -217,10 +217,16 @@ class Tool implements ToolInterface
 
     public function toDefinition(): array
     {
+        $schema = $this->getInputSchema();
+
+        // Cast properties to object to ensure json_encode produces {} not []
+        // when properties is empty. The API requires "properties" to be a JSON object.
+        $schema['properties'] = (object) $schema['properties'];
+
         return [
             'name' => $this->name,
             'description' => $this->description,
-            'input_schema' => $this->getInputSchema(),
+            'input_schema' => $schema,
         ];
     }
 

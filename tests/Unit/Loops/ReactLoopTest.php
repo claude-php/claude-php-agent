@@ -400,6 +400,116 @@ class ReactLoopTest extends TestCase
         $this->assertEquals("First part\nSecond part\nThird part", $result->getAnswer());
     }
 
+    public function testToolUseWithEmptyInputEncodesAsJsonObject(): void
+    {
+        $tool = Tool::create('get_time')
+            ->handler(fn(): string => '2024-01-01 12:00:00');
+
+        $config = new AgentConfig();
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'What time is it?',
+            tools: [$tool],
+            config: $config
+        );
+
+        // Simulate API response with empty input {} (decoded as [] by json_decode)
+        $toolUseResponse = $this->createMockMessage(
+            [
+                [
+                    'type' => 'tool_use',
+                    'id' => 'tool_456',
+                    'name' => 'get_time',
+                    'input' => [], // This is what json_decode($json, true) produces for {}
+                ],
+            ],
+            'tool_use'
+        );
+
+        $finalResponse = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'The time is 2024-01-01 12:00:00']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->twice()
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->twice()
+            ->andReturn($toolUseResponse, $finalResponse);
+
+        $result = $this->loop->execute($context);
+
+        $this->assertTrue($result->isCompleted());
+
+        // Verify that the assistant message content normalizes tool_use.input
+        // so json_encode produces {} instead of []
+        $messages = $result->getMessages();
+        $assistantMessage = $messages[1];
+        $this->assertEquals('assistant', $assistantMessage['role']);
+
+        $toolUseBlock = $assistantMessage['content'][0];
+        $this->assertEquals('tool_use', $toolUseBlock['type']);
+
+        // The input should be a stdClass (object) so json_encode outputs {}
+        $this->assertInstanceOf(\stdClass::class, $toolUseBlock['input']);
+        $this->assertEquals('{}', json_encode($toolUseBlock['input']));
+    }
+
+    public function testToolUseWithNonEmptyInputPreservesValues(): void
+    {
+        $tool = Tool::create('calculator')
+            ->numberParam('a', 'First number')
+            ->handler(fn(array $input): int => $input['a'] * 2);
+
+        $config = new AgentConfig();
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Double 5',
+            tools: [$tool],
+            config: $config
+        );
+
+        $toolUseResponse = $this->createMockMessage(
+            [
+                [
+                    'type' => 'tool_use',
+                    'id' => 'tool_789',
+                    'name' => 'calculator',
+                    'input' => ['a' => 5],
+                ],
+            ],
+            'tool_use'
+        );
+
+        $finalResponse = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'The answer is 10']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->twice()
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->twice()
+            ->andReturn($toolUseResponse, $finalResponse);
+
+        $result = $this->loop->execute($context);
+
+        $this->assertTrue($result->isCompleted());
+
+        // Verify non-empty input is still correctly encoded as a JSON object
+        $messages = $result->getMessages();
+        $assistantMessage = $messages[1];
+        $toolUseBlock = $assistantMessage['content'][0];
+
+        $this->assertInstanceOf(\stdClass::class, $toolUseBlock['input']);
+        $encoded = json_encode($toolUseBlock['input']);
+        $this->assertEquals('{"a":5}', $encoded);
+    }
+
     public function testMessagesAccumulate(): void
     {
         $config = new AgentConfig();
