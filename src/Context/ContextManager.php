@@ -81,31 +81,50 @@ class ContextManager
             $messages = $this->clearToolResults($messages);
         }
 
-        // If still too large, remove oldest messages (keep first system message)
-        $compacted = [];
-        $systemMessage = null;
+        // If clearing tool results was enough, return early
+        if ($this->fitsInContext($messages, $tools)) {
+            return $messages;
+        }
 
-        // Preserve system message if present
+        // Extract preserved messages (system + initial user task) that must
+        // always remain at the start of the compacted result.
+        $preserved = [];
+
         if (! empty($messages) && ($messages[0]['role'] ?? '') === 'system') {
-            $systemMessage = $messages[0];
-            $compacted[] = $systemMessage;
+            $preserved[] = $messages[0];
             $messages = array_slice($messages, 1);
         }
 
-        // Add newer message units (tool_use + tool_result pairs) in reverse order until we fit
+        // Preserve the initial user message (the task prompt).
+        // Without it, compacted messages may start with an assistant message,
+        // violating the API requirement that messages begin with a user message.
+        if (! empty($messages) && ($messages[0]['role'] ?? '') === 'user') {
+            $preserved[] = $messages[0];
+            $messages = array_slice($messages, 1);
+        }
+
+        // Build message units from the remaining messages. Each unit is either
+        // a tool_use+tool_result pair or a standalone message. We add units
+        // from most recent to oldest, keeping as many as fit in the context.
         $units = $this->buildMessageUnits($messages);
         $recentUnits = array_reverse($units);
+
+        $recent = [];
         foreach ($recentUnits as $unit) {
-            foreach (array_reverse($unit) as $message) {
-                array_unshift($compacted, $message);
-            }
+            $candidateRecent = array_merge($unit, $recent);
+            $candidate = array_merge($preserved, $candidateRecent);
 
-            if ($this->fitsInContext($compacted, $tools)) {
-                $this->logger->debug('Compacted to ' . count($compacted) . ' messages');
-
-                return $compacted;
+            if ($this->fitsInContext($candidate, $tools)) {
+                $recent = $candidateRecent;
+            } else {
+                // Adding this unit would exceed the context. Stop here.
+                break;
             }
         }
+
+        $compacted = array_merge($preserved, $recent);
+
+        $this->logger->debug('Compacted to ' . count($compacted) . ' messages');
 
         return $compacted;
     }

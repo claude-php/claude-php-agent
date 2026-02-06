@@ -207,8 +207,12 @@ class AgentContext
     {
         $this->messages[] = $message;
 
-        // Auto-compact if context manager is configured and threshold exceeded
-        if ($this->contextManager !== null) {
+        // Auto-compact if context manager is configured and threshold exceeded.
+        // Skip compaction when the last message is an assistant message with
+        // tool_use blocks but no following tool_result. Compacting at this point
+        // would separate the tool_use from its tool_result (which hasn't been
+        // added yet), corrupting the message structure required by the API.
+        if ($this->contextManager !== null && ! $this->hasDanglingToolUse()) {
             $usage = $this->contextManager->getUsagePercentage(
                 $this->messages,
                 $this->getToolDefinitions()
@@ -221,6 +225,39 @@ class AgentContext
                 );
             }
         }
+    }
+
+    /**
+     * Check if the last message is an assistant message with tool_use blocks
+     * that doesn't have a following tool_result message.
+     *
+     * This indicates we're between adding the assistant response and the
+     * tool results, and compaction must be deferred to avoid orphaning
+     * the tool_use blocks.
+     */
+    private function hasDanglingToolUse(): bool
+    {
+        if (empty($this->messages)) {
+            return false;
+        }
+
+        $lastMessage = $this->messages[count($this->messages) - 1];
+
+        if (($lastMessage['role'] ?? '') !== 'assistant') {
+            return false;
+        }
+
+        if (! is_array($lastMessage['content'] ?? null)) {
+            return false;
+        }
+
+        foreach ($lastMessage['content'] as $block) {
+            if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

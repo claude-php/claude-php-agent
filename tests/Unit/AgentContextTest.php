@@ -298,4 +298,67 @@ class AgentContextTest extends TestCase
         $this->assertEquals('Test error', $result->getError());
         $this->assertEquals(1, $result->getIterations());
     }
+
+    public function testAddMessageDefersCompactionForDanglingToolUse(): void
+    {
+        $contextManager = new \ClaudeAgents\Context\ContextManager(
+            maxContextTokens: 50, // Very low to force compaction
+            options: ['compact_threshold' => 0.1] // Low threshold to trigger compaction
+        );
+
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Analyze document',
+            tools: [],
+            config: $this->config,
+            contextManager: $contextManager,
+        );
+
+        // Add enough messages to exceed the context threshold
+        for ($i = 0; $i < 5; $i++) {
+            $context->addMessage([
+                'role' => 'assistant',
+                'content' => [
+                    ['type' => 'tool_use', 'id' => "tool_{$i}", 'name' => 'read', 'input' => []],
+                ],
+            ]);
+            $context->addMessage([
+                'role' => 'user',
+                'content' => [
+                    ['type' => 'tool_result', 'tool_use_id' => "tool_{$i}", 'content' => str_repeat('x', 100)],
+                ],
+            ]);
+        }
+
+        // Verify that every tool_use in the messages has a matching tool_result
+        $messages = $context->getMessages();
+        for ($i = 0; $i < count($messages); $i++) {
+            $msg = $messages[$i];
+            if (! is_array($msg['content'] ?? null)) {
+                continue;
+            }
+
+            $hasToolUse = false;
+            foreach ($msg['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                    $hasToolUse = true;
+                    break;
+                }
+            }
+
+            if (! $hasToolUse) {
+                continue;
+            }
+
+            // Next message must be a user message with tool_result
+            $this->assertArrayHasKey($i + 1, $messages,
+                "tool_use at message index {$i} must have a following message");
+            $this->assertEquals('user', $messages[$i + 1]['role'],
+                "Message after tool_use at {$i} must be user role");
+        }
+
+        // Verify first message is still the user task
+        $this->assertEquals('user', $messages[0]['role']);
+        $this->assertEquals('Analyze document', $messages[0]['content']);
+    }
 }

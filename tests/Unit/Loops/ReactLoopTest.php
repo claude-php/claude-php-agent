@@ -6,6 +6,7 @@ namespace ClaudeAgents\Tests\Unit\Loops;
 
 use ClaudeAgents\AgentContext;
 use ClaudeAgents\Config\AgentConfig;
+use ClaudeAgents\Context\ContextManager;
 use ClaudeAgents\Loops\ReactLoop;
 use ClaudeAgents\Tools\Tool;
 use ClaudePhp\ClaudePhp;
@@ -596,5 +597,178 @@ class ReactLoopTest extends TestCase
         $this->assertCount(2, $messages); // User task + assistant response
         $this->assertEquals('user', $messages[0]['role']);
         $this->assertEquals('assistant', $messages[1]['role']);
+    }
+
+    /**
+     * Regression test: compaction must not fire between adding assistant
+     * tool_use and user tool_result messages, as this corrupts message
+     * pairing and causes API validation errors.
+     */
+    public function testMultiIterationWithCompactionPreservesToolUsePairing(): void
+    {
+        $tool = Tool::create('read_file')
+            ->stringParam('path', 'File path')
+            ->handler(fn(array $input): string => str_repeat('file content ', 50));
+
+        // Use a small context limit so compaction fires during the loop
+        $contextManager = new ContextManager(
+            maxContextTokens: 200,
+            options: ['compact_threshold' => 0.5, 'clear_tool_results' => true]
+        );
+
+        $config = AgentConfig::fromArray(['max_iterations' => 10]);
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Analyze this large document',
+            tools: [$tool],
+            config: $config,
+            contextManager: $contextManager,
+        );
+
+        // Build a sequence: 9 tool_use iterations, then a final end_turn
+        $responses = [];
+        for ($i = 1; $i <= 9; $i++) {
+            $responses[] = $this->createMockMessage(
+                [
+                    ['type' => 'text', 'text' => "Reading section {$i}"],
+                    [
+                        'type' => 'tool_use',
+                        'id' => "toolu_{$i}",
+                        'name' => 'read_file',
+                        'input' => ['path' => "/doc/section{$i}.txt"],
+                    ],
+                ],
+                'tool_use'
+            );
+        }
+        $responses[] = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'Analysis complete']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->times(10)
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->times(10)
+            ->andReturn(...$responses);
+
+        $result = $this->loop->execute($context);
+
+        // Should complete successfully despite compaction
+        $this->assertTrue($result->isCompleted());
+        $this->assertFalse($result->hasFailed(), 'Should not fail: ' . ($result->getError() ?? ''));
+        $this->assertEquals('Analysis complete', $result->getAnswer());
+
+        // Verify message structure integrity
+        $messages = $result->getMessages();
+
+        // First message must be the user task
+        $this->assertEquals('user', $messages[0]['role']);
+        $this->assertEquals('Analyze this large document', $messages[0]['content']);
+
+        // Verify every tool_use has a matching tool_result immediately after
+        for ($i = 0; $i < count($messages); $i++) {
+            $msg = $messages[$i];
+            if (! is_array($msg['content'] ?? null)) {
+                continue;
+            }
+
+            $toolUseIds = [];
+            foreach ($msg['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                    $toolUseIds[] = $block['id'];
+                }
+            }
+
+            if (empty($toolUseIds)) {
+                continue;
+            }
+
+            $this->assertArrayHasKey($i + 1, $messages,
+                "tool_use at message {$i} has no following message (IDs: " . implode(', ', $toolUseIds) . ')');
+            $next = $messages[$i + 1];
+            $this->assertEquals('user', $next['role'],
+                "Message after tool_use at {$i} must be user");
+            $this->assertIsArray($next['content']);
+
+            $resultIds = [];
+            foreach ($next['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'tool_result') {
+                    $resultIds[] = $block['tool_use_id'];
+                }
+            }
+
+            foreach ($toolUseIds as $id) {
+                $this->assertContains($id, $resultIds,
+                    "tool_use id {$id} at message {$i} has no matching tool_result");
+            }
+        }
+    }
+
+    /**
+     * Regression test: verify that messages sent to the API always start
+     * with a user message, even after compaction drops older messages.
+     */
+    public function testApiCallsAlwaysStartWithUserMessage(): void
+    {
+        $tool = Tool::create('search')
+            ->stringParam('query', 'Search query')
+            ->handler(fn(array $input): string => str_repeat('search result ', 100));
+
+        $contextManager = new ContextManager(
+            maxContextTokens: 150,
+            options: ['compact_threshold' => 0.5, 'clear_tool_results' => true]
+        );
+
+        $config = AgentConfig::fromArray(['max_iterations' => 6]);
+
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Search for information',
+            tools: [$tool],
+            config: $config,
+            contextManager: $contextManager,
+        );
+
+        // Track the messages param passed to each API call
+        $apiCallMessages = [];
+
+        $responses = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $responses[] = $this->createMockMessage(
+                [
+                    ['type' => 'tool_use', 'id' => "tool_{$i}", 'name' => 'search', 'input' => ['query' => "q{$i}"]],
+                ],
+                'tool_use'
+            );
+        }
+        $responses[] = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'Done']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->times(6)
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->times(6)
+            ->andReturnUsing(function (array $params) use (&$apiCallMessages, &$responses) {
+                $apiCallMessages[] = $params['messages'];
+                return array_shift($responses);
+            });
+
+        $result = $this->loop->execute($context);
+
+        $this->assertTrue($result->isCompleted());
+        $this->assertFalse($result->hasFailed(), 'Should not fail: ' . ($result->getError() ?? ''));
+
+        // Every API call must have messages starting with a user message
+        foreach ($apiCallMessages as $callIndex => $msgs) {
+            $this->assertEquals('user', $msgs[0]['role'],
+                "API call {$callIndex}: messages must start with user role, got '{$msgs[0]['role']}'");
+        }
     }
 }

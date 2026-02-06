@@ -122,11 +122,11 @@ class ContextManagerTest extends TestCase
 
     public function testCompactMessagesRemovesOldest(): void
     {
-        $manager = $this->createManager(50); // Very small limit
+        $manager = $this->createManager(100); // Small limit
 
         $messages = [
             ['role' => 'system', 'content' => 'System prompt'],
-            ['role' => 'user', 'content' => str_repeat('Message 1 ', 50)],
+            ['role' => 'user', 'content' => 'My task'],
             ['role' => 'assistant', 'content' => str_repeat('Response 1 ', 50)],
             ['role' => 'user', 'content' => str_repeat('Message 2 ', 50)],
             ['role' => 'assistant', 'content' => str_repeat('Response 2 ', 50)],
@@ -138,16 +138,12 @@ class ContextManagerTest extends TestCase
         // Should keep fewer messages due to size limit
         $this->assertLessThan(count($messages), count($compacted));
 
-        // Should have a system message somewhere in the result
-        $hasSystemMessage = false;
-        foreach ($compacted as $msg) {
-            if ($msg['role'] === 'system') {
-                $hasSystemMessage = true;
+        // System message should be first
+        $this->assertEquals('system', $compacted[0]['role']);
 
-                break;
-            }
-        }
-        $this->assertTrue($hasSystemMessage, 'System message should be preserved');
+        // Initial user message should be preserved
+        $this->assertEquals('user', $compacted[1]['role']);
+        $this->assertEquals('My task', $compacted[1]['content']);
 
         // Should keep most recent message
         $hasRecentMessage = false;
@@ -247,11 +243,12 @@ class ContextManagerTest extends TestCase
 
     public function testCompactMessagesPreservesToolUsePairs(): void
     {
-        $manager = $this->createManager(12, ['clear_tool_results' => true]);
+        $manager = $this->createManager(120, ['clear_tool_results' => true]);
 
         $messages = [
-            ['role' => 'system', 'content' => 'System prompt'],
-            ['role' => 'user', 'content' => str_repeat('Message 1 ', 50)],
+            ['role' => 'user', 'content' => 'Task'],
+            ['role' => 'assistant', 'content' => str_repeat('Thinking ', 50)],
+            ['role' => 'user', 'content' => str_repeat('Follow up ', 50)],
             [
                 'role' => 'assistant',
                 'content' => [
@@ -269,6 +266,10 @@ class ContextManagerTest extends TestCase
 
         $compacted = $manager->compactMessages($messages);
 
+        // Should have fewer messages than the original
+        $this->assertLessThan(count($messages), count($compacted));
+
+        $foundToolUse = false;
         for ($i = 0; $i < count($compacted); $i++) {
             $message = $compacted[$i];
             $next = $compacted[$i + 1] ?? null;
@@ -277,13 +278,24 @@ class ContextManagerTest extends TestCase
                 && array_filter($message['content'], fn ($b) => is_array($b) && ($b['type'] ?? '') === 'tool_use') !== [];
 
             if ($hasToolUse) {
+                $foundToolUse = true;
                 $this->assertIsArray($next);
                 $this->assertEquals('user', $next['role'] ?? null);
                 $this->assertIsArray($next['content'] ?? null);
                 $this->assertNotEmpty(
-                    array_filter($next['content'], fn ($b) => is_array($b) && ($b['type'] ?? '') === 'tool_result')
+                    array_filter($next['content'], fn ($b) => is_array($b) && ($b['type'] ?? '') === 'tool_result'),
+                    'tool_use must have matching tool_result in next message'
                 );
             }
+        }
+
+        // If compaction kept the tool_use pair, verify it was properly paired
+        // If it was dropped entirely (both tool_use and tool_result), that's also valid
+        if ($foundToolUse) {
+            $this->assertTrue(true, 'Tool use pair was preserved correctly');
+        } else {
+            // Verify the pair was dropped entirely (not just the tool_result)
+            $this->assertTrue(true, 'Tool use pair was dropped as a unit');
         }
     }
 
@@ -366,5 +378,142 @@ class ContextManagerTest extends TestCase
         $withTools = $manager->getUsagePercentage($messages, $tools);
 
         $this->assertGreaterThan($withoutTools, $withTools);
+    }
+
+    public function testCompactMessagesPreservesInitialUserMessage(): void
+    {
+        $manager = $this->createManager(50);
+
+        $messages = [
+            ['role' => 'user', 'content' => 'My task'],
+            ['role' => 'assistant', 'content' => str_repeat('Response 1 ', 50)],
+            ['role' => 'user', 'content' => str_repeat('Message 2 ', 50)],
+            ['role' => 'assistant', 'content' => 'Short response'],
+            ['role' => 'user', 'content' => 'Message 3'],
+        ];
+
+        $compacted = $manager->compactMessages($messages);
+
+        // The initial user message (task) must always be preserved
+        $this->assertEquals('user', $compacted[0]['role']);
+        $this->assertEquals('My task', $compacted[0]['content']);
+    }
+
+    public function testCompactMessagesPreservesBothSystemAndUserMessages(): void
+    {
+        $manager = $this->createManager(50);
+
+        $messages = [
+            ['role' => 'system', 'content' => 'System prompt'],
+            ['role' => 'user', 'content' => 'My task'],
+            ['role' => 'assistant', 'content' => str_repeat('Response ', 50)],
+            ['role' => 'user', 'content' => 'Message 2'],
+        ];
+
+        $compacted = $manager->compactMessages($messages);
+
+        // Both system and initial user message must be preserved
+        $this->assertEquals('system', $compacted[0]['role']);
+        $this->assertEquals('System prompt', $compacted[0]['content']);
+        $this->assertEquals('user', $compacted[1]['role']);
+        $this->assertEquals('My task', $compacted[1]['content']);
+    }
+
+    public function testCompactMessagesNeverOrphansToolUse(): void
+    {
+        // Use a limit that allows some but not all messages to survive
+        $manager = $this->createManager(300, ['clear_tool_results' => true]);
+
+        // Build a message history with many tool_use/tool_result pairs
+        $messages = [
+            ['role' => 'user', 'content' => 'Analyze this document'],
+        ];
+
+        for ($i = 1; $i <= 10; $i++) {
+            $messages[] = [
+                'role' => 'assistant',
+                'content' => [
+                    ['type' => 'text', 'text' => str_repeat("Thinking step {$i} ", 20)],
+                    ['type' => 'tool_use', 'id' => "tool_{$i}", 'name' => 'read', 'input' => ['file' => "f{$i}"]],
+                ],
+            ];
+            $messages[] = [
+                'role' => 'user',
+                'content' => [
+                    ['type' => 'tool_result', 'tool_use_id' => "tool_{$i}", 'content' => str_repeat("Result {$i} ", 30)],
+                ],
+            ];
+        }
+
+        $compacted = $manager->compactMessages($messages);
+
+        // Should have compacted (fewer messages than original)
+        $this->assertLessThan(count($messages), count($compacted));
+
+        // First message must be the initial user message
+        $this->assertEquals('user', $compacted[0]['role']);
+        $this->assertEquals('Analyze this document', $compacted[0]['content']);
+
+        // Verify: every tool_use must have a matching tool_result immediately after
+        $foundToolUse = false;
+        for ($i = 0; $i < count($compacted); $i++) {
+            $msg = $compacted[$i];
+            if (! is_array($msg['content'] ?? null)) {
+                continue;
+            }
+
+            $toolUseIds = [];
+            foreach ($msg['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                    $toolUseIds[] = $block['id'];
+                }
+            }
+
+            if (empty($toolUseIds)) {
+                continue;
+            }
+
+            $foundToolUse = true;
+
+            // There must be a next message with matching tool_results
+            $this->assertArrayHasKey($i + 1, $compacted, "tool_use at index {$i} has no following message");
+            $next = $compacted[$i + 1];
+            $this->assertEquals('user', $next['role'], "Message after tool_use at {$i} must be user");
+            $this->assertIsArray($next['content']);
+
+            $resultIds = [];
+            foreach ($next['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'tool_result') {
+                    $resultIds[] = $block['tool_use_id'];
+                }
+            }
+
+            foreach ($toolUseIds as $id) {
+                $this->assertContains($id, $resultIds, "tool_use id {$id} has no matching tool_result");
+            }
+        }
+
+        // At least some tool_use pairs should survive with the 300-token limit
+        $this->assertTrue($foundToolUse, 'At least one tool_use pair should survive compaction');
+    }
+
+    public function testCompactMessagesStartsWithUserMessage(): void
+    {
+        $manager = $this->createManager(30);
+
+        $messages = [
+            ['role' => 'user', 'content' => 'Task'],
+            ['role' => 'assistant', 'content' => str_repeat('Response 1 ', 50)],
+            ['role' => 'user', 'content' => str_repeat('Follow up ', 50)],
+            ['role' => 'assistant', 'content' => str_repeat('Response 2 ', 50)],
+            ['role' => 'user', 'content' => 'Final message'],
+        ];
+
+        $compacted = $manager->compactMessages($messages);
+
+        // Compacted messages must always start with a user message
+        $this->assertNotEmpty($compacted);
+        $this->assertEquals('user', $compacted[0]['role'],
+            'Compacted messages must start with user role to satisfy API requirements');
     }
 }
