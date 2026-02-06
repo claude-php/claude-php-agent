@@ -120,6 +120,26 @@ trait ToolExecutionTrait
     }
 
     /**
+     * Check if response content contains any tool_use blocks.
+     *
+     * This should be used instead of relying on stop_reason to determine
+     * whether tool results need to be added. The API requires every tool_use
+     * block to have a corresponding tool_result, regardless of the stop reason.
+     *
+     * @param array<mixed> $content Response content blocks
+     */
+    private function contentHasToolUse(array $content): bool
+    {
+        foreach ($content as $block) {
+            if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Extract text content from response blocks.
      *
      * @param array<mixed> $content

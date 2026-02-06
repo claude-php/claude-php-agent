@@ -311,12 +311,13 @@ class PlanExecuteLoop implements CallbackSupportingLoopInterface
             ($this->onIteration)($context->getIteration(), $response, $context);
         }
 
-        // Check if tools were used
-        $stopReason = $response->stop_reason ?? 'end_turn';
+        // Check if the response contains tool_use blocks. Use content
+        // inspection instead of stop_reason to handle edge cases where
+        // stop_reason is 'max_tokens' but tool_use blocks are present.
+        $hasToolUse = $this->contentHasToolUse($response->content);
 
-        if ($stopReason === 'tool_use') {
-            // Execute tools
-            // ALWAYS add tool_results - API requires it after tool_use
+        if ($hasToolUse) {
+            // Execute tools — API requires tool_result for every tool_use
             $toolResults = $this->executeTools($context, $response->content);
 
             // Get final response after tool execution

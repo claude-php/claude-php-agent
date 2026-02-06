@@ -110,26 +110,33 @@ class ReactLoop implements CallbackSupportingLoopInterface
                 // Check stop reason
                 $stopReason = $response->stop_reason ?? 'end_turn';
 
-                if ($stopReason === 'end_turn') {
-                    // Extract final answer from text blocks
-                    $answer = $this->extractTextContent($response->content);
-                    $context->complete($answer);
-                    $this->logger->info("Agent completed in {$iteration} iterations");
+                // CRITICAL: Always check content for tool_use blocks regardless of
+                // stop_reason. The API requires every tool_use to have a corresponding
+                // tool_result in the next message. Relying solely on stop_reason
+                // breaks when stop_reason is 'max_tokens' but the content still
+                // contains complete tool_use blocks that need tool_result responses.
+                $hasToolUse = $this->contentHasToolUse($response->content);
 
-                    break;
-                }
-
-                if ($stopReason === 'tool_use') {
-                    // Execute tools and add results
-                    // ALWAYS add tool_results message - API requires it after tool_use
+                if ($hasToolUse) {
+                    // Execute tools and add results — required by the API for
+                    // every tool_use block, no matter what the stop_reason is.
                     $toolResults = $this->executeTools($context, $response->content);
 
                     $context->addMessage([
                         'role' => 'user',
                         'content' => $toolResults,
                     ]);
+                } elseif ($stopReason === 'end_turn') {
+                    // No tool use — extract final answer from text blocks
+                    $answer = $this->extractTextContent($response->content);
+                    $context->complete($answer);
+                    $this->logger->info("Agent completed in {$iteration} iterations");
+
+                    break;
                 } else {
-                    $this->logger->warning("Unexpected stop reason: {$stopReason}");
+                    // No tool use and not end_turn (e.g. max_tokens, stop_sequence).
+                    // Continue the loop so the model can finish its response.
+                    $this->logger->warning("Stop reason '{$stopReason}' in iteration {$iteration}, continuing");
                 }
             } catch (\Throwable $e) {
                 $this->logger->error("Error in iteration {$iteration}: {$e->getMessage()}");

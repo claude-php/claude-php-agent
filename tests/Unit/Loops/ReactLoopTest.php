@@ -708,6 +708,75 @@ class ReactLoopTest extends TestCase
     }
 
     /**
+     * Regression test: when stop_reason is 'max_tokens' but the content
+     * contains tool_use blocks, tool_results must still be added.
+     * Previously the loop only checked stop_reason, which caused orphaned
+     * tool_use blocks and an API validation error:
+     * "tool_use ids were found without tool_result blocks immediately after".
+     */
+    public function testToolUseWithMaxTokensStopReasonStillAddsToolResults(): void
+    {
+        $tool = Tool::create('bash')
+            ->stringParam('command', 'Command')
+            ->handler(fn(array $input): string => 'command output');
+
+        $config = new AgentConfig();
+        $context = new AgentContext(
+            client: $this->mockClient,
+            task: 'Run a command',
+            tools: [$tool],
+            config: $config
+        );
+
+        // Response with tool_use but stop_reason = 'max_tokens'
+        $toolUseResponse = $this->createMockMessage(
+            [
+                ['type' => 'text', 'text' => 'Let me run that command'],
+                [
+                    'type' => 'tool_use',
+                    'id' => 'tool_max',
+                    'name' => 'bash',
+                    'input' => ['command' => 'ls -la'],
+                ],
+            ],
+            'max_tokens'
+        );
+
+        $finalResponse = $this->createMockMessage(
+            [['type' => 'text', 'text' => 'Here are the files']],
+            'end_turn'
+        );
+
+        $this->mockClient->shouldReceive('messages')
+            ->twice()
+            ->andReturn($this->mockMessages);
+
+        $this->mockMessages->shouldReceive('create')
+            ->twice()
+            ->andReturn($toolUseResponse, $finalResponse);
+
+        $result = $this->loop->execute($context);
+
+        $this->assertTrue($result->isCompleted());
+        $this->assertFalse($result->hasFailed(), 'Should not fail: ' . ($result->getError() ?? ''));
+        $this->assertEquals('Here are the files', $result->getAnswer());
+
+        // Verify tool was executed
+        $toolCalls = $result->getToolCalls();
+        $this->assertCount(1, $toolCalls);
+        $this->assertEquals('bash', $toolCalls[0]['tool']);
+
+        // Verify message structure: tool_use at [1] must be followed by tool_result at [2]
+        $messages = $result->getMessages();
+        $this->assertCount(4, $messages); // user, assistant(tool_use), user(tool_result), assistant(final)
+
+        $toolResultMsg = $messages[2];
+        $this->assertEquals('user', $toolResultMsg['role']);
+        $this->assertEquals('tool_result', $toolResultMsg['content'][0]['type']);
+        $this->assertEquals('tool_max', $toolResultMsg['content'][0]['tool_use_id']);
+    }
+
+    /**
      * Regression test: verify that messages sent to the API always start
      * with a user message, even after compaction drops older messages.
      */

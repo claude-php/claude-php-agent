@@ -205,11 +205,12 @@ class ReflectionLoop implements CallbackSupportingLoopInterface
             ($this->onIteration)($context->getIteration(), $response, $context);
         }
 
-        // Handle tool use if present
-        $stopReason = $response->stop_reason ?? 'end_turn';
+        // Handle tool use if present — check content rather than stop_reason
+        // to handle edge cases like stop_reason='max_tokens' with tool_use blocks.
+        $hasToolUse = $this->contentHasToolUse($response->content);
 
-        if ($stopReason === 'tool_use') {
-            // ALWAYS add tool_results - API requires it after tool_use
+        if ($hasToolUse) {
+            // API requires tool_result for every tool_use
             $toolResults = $this->executeTools($context, $response->content);
 
             $context->incrementIteration();
@@ -325,11 +326,12 @@ class ReflectionLoop implements CallbackSupportingLoopInterface
             ($this->onIteration)($context->getIteration(), $response, $context);
         }
 
-        // Handle tool use if present
-        $stopReason = $response->stop_reason ?? 'end_turn';
+        // Handle tool use if present — check content rather than stop_reason
+        // to handle edge cases like stop_reason='max_tokens' with tool_use blocks.
+        $hasToolUse = $this->contentHasToolUse($response->content);
 
-        if ($stopReason === 'tool_use') {
-            // ALWAYS add tool_results - API requires it after tool_use
+        if ($hasToolUse) {
+            // API requires tool_result for every tool_use
             $toolResults = $this->executeTools($context, $response->content);
 
             $context->incrementIteration();
