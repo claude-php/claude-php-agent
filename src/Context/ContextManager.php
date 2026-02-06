@@ -76,7 +76,7 @@ class ContextManager
 
         $this->logger->info('Compacting context messages');
 
-        // Clear tool results first
+        // Compact tool results first (preserve tool_use/tool_result pairing)
         if ($this->clearToolResults) {
             $messages = $this->clearToolResults($messages);
         }
@@ -92,10 +92,13 @@ class ContextManager
             $messages = array_slice($messages, 1);
         }
 
-        // Add newer messages in reverse order until we fit
-        $recentMessages = array_reverse($messages);
-        foreach ($recentMessages as $message) {
-            array_unshift($compacted, $message);
+        // Add newer message units (tool_use + tool_result pairs) in reverse order until we fit
+        $units = $this->buildMessageUnits($messages);
+        $recentUnits = array_reverse($units);
+        foreach ($recentUnits as $unit) {
+            foreach (array_reverse($unit) as $message) {
+                array_unshift($compacted, $message);
+            }
 
             if ($this->fitsInContext($compacted, $tools)) {
                 $this->logger->debug('Compacted to ' . count($compacted) . ' messages');
@@ -117,15 +120,99 @@ class ContextManager
     {
         return array_map(function ($message) {
             if (($message['role'] ?? '') === 'user' && is_array($message['content'] ?? null)) {
-                // Clear tool result blocks
-                $message['content'] = array_filter(
-                    $message['content'],
-                    fn ($block) => ! is_array($block) || ($block['type'] ?? '') !== 'tool_result'
-                );
+                // Compact tool result blocks but keep structure to preserve pairing
+                $message['content'] = array_map(function ($block) {
+                    if (! is_array($block) || ($block['type'] ?? '') !== 'tool_result') {
+                        return $block;
+                    }
+
+                    $toolUseId = $block['tool_use_id'] ?? null;
+                    $isError = $block['is_error'] ?? false;
+                    $replacement = [
+                        'type' => 'tool_result',
+                        'tool_use_id' => $toolUseId,
+                        'content' => '[tool result truncated]',
+                    ];
+
+                    if ($isError) {
+                        $replacement['is_error'] = true;
+                    }
+
+                    return $replacement;
+                }, $message['content']);
             }
 
             return $message;
         }, $messages);
+    }
+
+    /**
+     * Build message units that preserve tool_use/tool_result pairs.
+     *
+     * @param array<array<string, mixed>> $messages
+     * @return array<array<int, array<string, mixed>>>
+     */
+    private function buildMessageUnits(array $messages): array
+    {
+        $units = [];
+        $count = count($messages);
+        $i = 0;
+
+        while ($i < $count) {
+            $message = $messages[$i];
+            $next = $messages[$i + 1] ?? null;
+
+            if ($this->isToolUseMessage($message) && is_array($next) && $this->isToolResultMessage($next)) {
+                $units[] = [$message, $next];
+                $i += 2;
+                continue;
+            }
+
+            $units[] = [$message];
+            $i++;
+        }
+
+        return $units;
+    }
+
+    /**
+     * Check if a message contains any tool_use blocks.
+     *
+     * @param array<string, mixed> $message
+     */
+    private function isToolUseMessage(array $message): bool
+    {
+        if (($message['role'] ?? '') !== 'assistant' || ! is_array($message['content'] ?? null)) {
+            return false;
+        }
+
+        foreach ($message['content'] as $block) {
+            if (is_array($block) && ($block['type'] ?? '') === 'tool_use') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a message contains any tool_result blocks.
+     *
+     * @param array<string, mixed> $message
+     */
+    private function isToolResultMessage(array $message): bool
+    {
+        if (($message['role'] ?? '') !== 'user' || ! is_array($message['content'] ?? null)) {
+            return false;
+        }
+
+        foreach ($message['content'] as $block) {
+            if (is_array($block) && ($block['type'] ?? '') === 'tool_result') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -161,7 +161,7 @@ class ContextManagerTest extends TestCase
         $this->assertTrue($hasRecentMessage, 'Most recent message should be kept');
     }
 
-    public function testCompactMessagesClearsToolResults(): void
+    public function testCompactMessagesCompactsToolResults(): void
     {
         $manager = $this->createManager(50, ['clear_tool_results' => true]);
 
@@ -178,7 +178,7 @@ class ContextManagerTest extends TestCase
 
         $compacted = $manager->compactMessages($messages);
 
-        // Tool results should be removed from user messages
+        // Tool results should be compacted in user messages
         $userMessage = null;
         foreach ($compacted as $msg) {
             if ($msg['role'] === 'user') {
@@ -191,17 +191,20 @@ class ContextManagerTest extends TestCase
         $this->assertNotNull($userMessage);
         $this->assertIsArray($userMessage['content']);
 
-        // Check that tool_result blocks are removed
+        // Check that tool_result blocks remain but are truncated
         $hasToolResult = false;
+        $hasTruncatedContent = false;
         foreach ($userMessage['content'] as $block) {
             if (is_array($block) && ($block['type'] ?? '') === 'tool_result') {
                 $hasToolResult = true;
+                $hasTruncatedContent = ($block['content'] ?? '') === '[tool result truncated]';
 
                 break;
             }
         }
 
-        $this->assertFalse($hasToolResult, 'Tool results should be removed');
+        $this->assertTrue($hasToolResult, 'Tool results should be preserved');
+        $this->assertTrue($hasTruncatedContent, 'Tool results should be truncated');
     }
 
     public function testCompactMessagesDoesNotClearToolResultsWhenDisabled(): void
@@ -240,6 +243,48 @@ class ContextManagerTest extends TestCase
         // Should work even without system message
         $this->assertIsArray($compacted);
         $this->assertNotEmpty($compacted);
+    }
+
+    public function testCompactMessagesPreservesToolUsePairs(): void
+    {
+        $manager = $this->createManager(12, ['clear_tool_results' => true]);
+
+        $messages = [
+            ['role' => 'system', 'content' => 'System prompt'],
+            ['role' => 'user', 'content' => str_repeat('Message 1 ', 50)],
+            [
+                'role' => 'assistant',
+                'content' => [
+                    ['type' => 'tool_use', 'id' => 'tool_1', 'name' => 'calculator', 'input' => []],
+                ],
+            ],
+            [
+                'role' => 'user',
+                'content' => [
+                    ['type' => 'tool_result', 'tool_use_id' => 'tool_1', 'content' => 'Result'],
+                ],
+            ],
+            ['role' => 'assistant', 'content' => 'Final answer'],
+        ];
+
+        $compacted = $manager->compactMessages($messages);
+
+        for ($i = 0; $i < count($compacted); $i++) {
+            $message = $compacted[$i];
+            $next = $compacted[$i + 1] ?? null;
+
+            $hasToolUse = is_array($message['content'] ?? null)
+                && array_filter($message['content'], fn ($b) => is_array($b) && ($b['type'] ?? '') === 'tool_use') !== [];
+
+            if ($hasToolUse) {
+                $this->assertIsArray($next);
+                $this->assertEquals('user', $next['role'] ?? null);
+                $this->assertIsArray($next['content'] ?? null);
+                $this->assertNotEmpty(
+                    array_filter($next['content'], fn ($b) => is_array($b) && ($b['type'] ?? '') === 'tool_result')
+                );
+            }
+        }
     }
 
     public function testSetMaxContextTokens(): void
