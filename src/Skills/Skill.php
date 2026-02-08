@@ -214,12 +214,31 @@ class Skill implements SkillInterface
     }
 
     /**
+     * Common English stop words that should be ignored during relevance scoring.
+     *
+     * These short, frequent words (like "in", "a", "the") cause false positives
+     * because they appear as substrings in unrelated skill names/descriptions
+     * (e.g. "in" matches "guidel-in-es", "f-in-ancial", "coauthor-in-g").
+     */
+    private const STOP_WORDS = [
+        'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'by',
+        'is', 'it', 'or', 'and', 'but', 'not', 'no', 'so', 'if',
+        'do', 'my', 'me', 'we', 'be', 'am', 'are', 'was', 'has',
+        'can', 'will', 'how', 'what', 'who', 'this', 'that', 'with',
+    ];
+
+    /**
      * Calculate relevance score for a query (0.0 to 1.0).
+     *
+     * Words shorter than 3 characters and common stop words are filtered
+     * out before scoring to prevent false positive matches.
      */
     public function relevanceScore(string $query): float
     {
-        $query = strtolower($query);
-        $words = array_filter(explode(' ', $query));
+        $query = strtolower(trim($query, '?!., '));
+        $words = array_values(array_filter(explode(' ', $query), function (string $w): bool {
+            return strlen($w) >= 3 && !in_array($w, self::STOP_WORDS, true);
+        }));
         $score = 0.0;
         $maxScore = count($words) > 0 ? count($words) : 1;
 
