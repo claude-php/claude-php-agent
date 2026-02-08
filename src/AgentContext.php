@@ -137,7 +137,7 @@ class AgentContext
     public function getToolDefinitions(): array
     {
         return array_map(
-            fn (ToolInterface $tool) => $tool->toDefinition(),
+            fn(ToolInterface $tool) => $tool->toDefinition(),
             $this->tools
         );
     }
@@ -180,7 +180,7 @@ class AgentContext
     {
         $this->tools = array_values(array_filter(
             $this->tools,
-            fn (ToolInterface $tool) => $tool->getName() !== $name
+            fn(ToolInterface $tool) => $tool->getName() !== $name
         ));
     }
 
