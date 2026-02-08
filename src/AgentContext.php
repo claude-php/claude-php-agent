@@ -88,7 +88,8 @@ class AgentContext
     public function __construct(
         private readonly ClaudePhp $client,
         private readonly string $task,
-        private readonly array $tools,
+        /** @var array<ToolInterface> */
+        private array $tools,
         private readonly Config\AgentConfig $config,
         private readonly ?MemoryInterface $memory = null,
         ?ContextManager $contextManager = null,
@@ -153,6 +154,34 @@ class AgentContext
         }
 
         return null;
+    }
+
+    /**
+     * Add a tool to the available tools at runtime.
+     *
+     * The new tool will be included in the next API call's tool definitions.
+     */
+    public function addTool(ToolInterface $tool): void
+    {
+        // Avoid duplicates
+        if ($this->getTool($tool->getName()) !== null) {
+            return;
+        }
+
+        $this->tools[] = $tool;
+    }
+
+    /**
+     * Remove a tool by name at runtime.
+     *
+     * The tool will no longer appear in subsequent API calls.
+     */
+    public function removeTool(string $name): void
+    {
+        $this->tools = array_values(array_filter(
+            $this->tools,
+            fn (ToolInterface $tool) => $tool->getName() !== $name
+        ));
     }
 
     /**

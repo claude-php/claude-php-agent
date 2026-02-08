@@ -108,9 +108,14 @@ trait ToolExecutionTrait
                 $result->isError()
             );
 
-            // Fire tool execution callback
+            // Fire tool execution callback.
+            // If the callback returns a ToolResult, use it as a replacement
+            // (e.g. for summarization). Otherwise keep the original result.
             if ($this->onToolExecution !== null) {
-                ($this->onToolExecution)($toolName, $toolInput, $result);
+                $transformed = ($this->onToolExecution)($toolName, $toolInput, $result);
+                if ($transformed instanceof ToolResult) {
+                    $result = $transformed;
+                }
             }
 
             $results[] = $result->toApiFormat($toolId);
